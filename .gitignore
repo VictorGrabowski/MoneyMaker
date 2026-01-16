@@ -26,6 +26,7 @@ yarn-error.log*
 *.sln
 *.sw?
 .DS_Store
+dist-release/
 
 # Agent / AI local files
 .agent/
