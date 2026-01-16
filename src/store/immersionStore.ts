@@ -10,9 +10,9 @@ export interface RadioStation {
 
 export const RADIO_STATIONS: RadioStation[] = [
     { name: 'Lofi Girl', url: 'jfKfPfyJRdk', style: 'Focus / Relax', type: 'youtube' },
-    { name: 'Radio Nova', url: 'http://novazz.ice.infomaniak.ch/novazz-128.mp3', style: 'Eclectic', type: 'stream' },
-    { name: 'FIP', url: 'http://icecast.radiofrance.fr/fip-midfi.mp3', style: 'Jazz / Groove', type: 'stream' },
-    { name: 'France Info', url: 'http://icecast.radiofrance.fr/franceinfo-midfi.mp3', style: 'News', type: 'stream' }
+    { name: 'Radio Nova', url: 'https://novazz.ice.infomaniak.ch/novazz-128.mp3', style: 'Eclectic', type: 'stream' },
+    { name: 'FIP', url: 'https://icecast.radiofrance.fr/fip-midfi.mp3', style: 'Jazz / Groove', type: 'stream' },
+    { name: 'France Info', url: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3', style: 'News', type: 'stream' }
 ]
 
 interface ImmersionState {

@@ -11,17 +11,47 @@ export const RadioPlayer: React.FC = () => {
 
     const station = RADIO_STATIONS[currentStationIndex]
 
-    // PLAY/PAUSE SYNC
+    // PLAY/PAUSE SYNC & CONTEXT RESUME
     useEffect(() => {
         setIsPlaying(isRadioOn)
-    }, [isRadioOn])
+
+        if (isRadioOn) {
+            console.log("RadioPlayer: Radio toggled ON. Station:", station.name)
+            if (audioContextRef.current?.state === 'suspended') {
+                audioContextRef.current.resume().then(() => {
+                    console.log("RadioPlayer: AudioContext resumed via effect.")
+                })
+            }
+        } else {
+            console.log("RadioPlayer: Radio toggled OFF.")
+        }
+    }, [isRadioOn, station.name])
+
+    // GLOBAL INTERACTION HOOK (The most reliable way to resume AudioContext)
+    useEffect(() => {
+        const resumeAudio = () => {
+            if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+                audioContextRef.current.resume().then(() => {
+                    console.log("RadioPlayer: AudioContext resumed via global interaction.")
+                })
+            }
+        }
+
+        window.addEventListener('click', resumeAudio)
+        window.addEventListener('keydown', resumeAudio)
+        return () => {
+            window.removeEventListener('click', resumeAudio)
+            window.removeEventListener('keydown', resumeAudio)
+        }
+    }, [])
 
     // STATION SWITCH EFFECT
     useEffect(() => {
         if (isRadioOn) {
+            console.log("RadioPlayer: Switching station to:", station.name)
             playStaticNoise()
         }
-    }, [currentStationIndex]) // Trigger fade on station change
+    }, [currentStationIndex, isRadioOn, station.name])
 
     // PROCEDURAL STATIC NOISE (White Noise)
     const playStaticNoise = () => {
@@ -31,12 +61,11 @@ export const RadioPlayer: React.FC = () => {
             }
 
             const ctx = audioContextRef.current
-            // Resume context if suspended (browser auto-play policy)
             if (ctx.state === 'suspended') {
                 ctx.resume()
             }
 
-            const bufferSize = ctx.sampleRate * 0.5 // 0.5 seconds
+            const bufferSize = ctx.sampleRate * 0.3 // Shorter static
             const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
             const data = buffer.getChannelData(0)
 
@@ -48,13 +77,13 @@ export const RadioPlayer: React.FC = () => {
             noise.buffer = buffer
 
             const gainNode = ctx.createGain()
-            gainNode.gain.value = 0.1 * volume // Quieter static
+            gainNode.gain.value = 0.05 * volume // Even quieter static
 
             noise.connect(gainNode)
             gainNode.connect(ctx.destination)
             noise.start()
         } catch (e) {
-            console.error("Static noise error:", e)
+            console.error("RadioPlayer: Static noise error:", e)
         }
     }
 
@@ -67,27 +96,44 @@ export const RadioPlayer: React.FC = () => {
     }
 
     return (
-        <div style={{ display: 'none' }}>
+        <div
+            className="fixed top-[-10px] left-[-10px] w-[1px] h-[1px] opacity-[0.01] overflow-hidden pointer-events-none z-[-1]"
+            aria-hidden="true"
+        >
             <ReactPlayer
                 ref={playerRef}
                 url={getUrl()}
-                playing={isPlaying}
+                playing={isRadioOn && isPlaying}
                 volume={volume}
-                width="0"
-                height="0"
-                onBuffer={() => setIsBuffering(true)}
-                onBufferEnd={() => setIsBuffering(false)}
-                onError={(e) => console.error("ReactPlayer Error:", e)}
+                width="100%"
+                height="100%"
+                playsinline
+                onStart={() => console.log("RadioPlayer: Playback started.")}
+                onPlay={() => console.log("RadioPlayer: onPlay event.")}
+                onPause={() => console.log("RadioPlayer: onPause event.")}
+                onBuffer={() => {
+                    setIsBuffering(true)
+                    console.log("RadioPlayer: Buffering...")
+                }}
+                onBufferEnd={() => {
+                    setIsBuffering(false)
+                    console.log("RadioPlayer: Buffering ended.")
+                }}
+                onError={(e) => console.error("RadioPlayer: ReactPlayer Error:", e)}
                 config={{
                     youtube: {
                         playerVars: {
                             showinfo: 0,
                             controls: 0,
-                            autoplay: 1
+                            autoplay: 1,
+                            playsinline: 1
                         }
                     },
                     file: {
-                        forceAudio: true
+                        forceAudio: true,
+                        attributes: {
+                            controlsList: 'nodownload'
+                        }
                     }
                 }}
             />

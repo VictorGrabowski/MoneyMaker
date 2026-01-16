@@ -11,7 +11,7 @@
     "publish": "npm run build && electron-builder --publish always"
   },
   "build": {
-    "appId": "com.vgrabowski.moneymaker",
+    "appId": "com.victorgrabowski.moneymaker",
     "productName": "MoneyMaker",
     "directories": {
       "output": "dist-release"
@@ -26,7 +26,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "vgrabowski",
+      "owner": "VictorGrabowski",
       "repo": "MoneyMaker"
     }
   },

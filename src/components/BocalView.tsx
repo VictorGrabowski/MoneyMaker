@@ -19,6 +19,7 @@ import imgBill50 from '../assets/money/bill_50.png'
 import imgBill100 from '../assets/money/bill_100.png'
 import imgBill200 from '../assets/money/bill_200.png'
 import imgBill500 from '../assets/money/bill_500.png'
+import imgIngotGold from '../assets/hub/golden_bar.png'
 
 // --- RADIO CONTROLS COMPONENT ---
 const RadioControls = () => {
@@ -128,7 +129,7 @@ const DENOMINATIONS: ItemConfig[] = [
     { value: 10000, type: 'gem', color: '#b6e3f4', borderColor: '#fff', width: 120, height: 120, displayText: '💎' },
     { value: 5000, type: 'ingot', color: '#f59e0b', borderColor: '#b45309', width: 200, height: 100, displayText: '5k' },
     { value: 2000, type: 'ingot', color: '#fbbf24', borderColor: '#d97706', width: 180, height: 90, displayText: '2k' },
-    { value: 1000, type: 'ingot', color: '#fcd34d', borderColor: '#b45309', width: 160, height: 80, displayText: '1k' },
+    { value: 1000, type: 'ingot', color: '#fcd34d', borderColor: '#b45309', width: 176, height: 88, displayText: '1k', texture: imgIngotGold },
     { value: 500, type: 'bill', color: '#d946ef', borderColor: '#86198f', width: 320, height: 164, displayText: '500', texture: imgBill500 }, // ~1.95 ratio
     { value: 200, type: 'bill', color: '#eab308', borderColor: '#854d0e', width: 306, height: 164, displayText: '200', texture: imgBill200 }, // ~1.86 ratio
     { value: 100, type: 'bill', color: '#10b981', borderColor: '#064e3b', width: 294, height: 164, displayText: '100', texture: imgBill100 }, // ~1.79 ratio
@@ -185,6 +186,7 @@ const MERGE_RECIPES: { inputs: number[], outputs: number[] }[] = [
 interface MoneyBody extends Matter.Body {
     isFrozen?: boolean
     denomination: ItemConfig
+    createdAt?: number
 }
 
 // Memoized Jar Decoration to avoid expensive re-renders
@@ -282,6 +284,7 @@ export const BocalView: React.FC = () => {
     }
     const fadingGhostsRef = useRef<FadingGhost[]>([])
     const mouseConstraintRef = useRef<Matter.MouseConstraint | null>(null)
+    const imageCache = useRef<Map<string, HTMLImageElement>>(new Map())
 
     const scaleRef = useRef<number>(1) // Shared physics scale based on jar width
     const [physicsScale, setPhysicsScale] = useState(0)
@@ -493,7 +496,12 @@ export const BocalView: React.FC = () => {
             frictionAir: config.type === 'bill' ? 0.02 : 0.01,
             angle: (Math.random() - 0.5) * Math.PI, // Random start angle
             // Sleeping threshold
-            sleepThreshold: 60
+            sleepThreshold: 60,
+            render: {
+                fillStyle: config.color,
+                strokeStyle: 'transparent', // Disable native border
+                lineWidth: 0
+            }
         }
 
         const radius = (config.width * physicsScale) / 2
@@ -811,8 +819,14 @@ export const BocalView: React.FC = () => {
                 if (denomination.texture) {
                     // REALISTIC MODE
                     const scale = scaleRef.current
-                    const img = new Image()
-                    img.src = denomination.texture
+
+                    // GET OR CREATE CACHED IMAGE
+                    let img = imageCache.current.get(denomination.texture)
+                    if (!img) {
+                        img = new Image()
+                        img.src = denomination.texture
+                        imageCache.current.set(denomination.texture, img)
+                    }
 
                     // ANIMATION LOGIC: GROWTH & BRIGHTNESS
                     let animScale = 1.0
@@ -850,12 +864,7 @@ export const BocalView: React.FC = () => {
                         context.beginPath()
                         context.arc(0, 0, radius, 0, 2 * Math.PI)
 
-                        // 1. Draw Debug Outline (Before clip to ensure visibility)
-                        context.strokeStyle = 'rgba(255, 165, 0, 0.5)' // Orange
-                        context.lineWidth = 1
-                        context.stroke()
-
-                        // 2. Clip to hitbox
+                        // 1. Clip to hitbox
                         context.clip()
 
                         // 3. Draw Texture Zoomed & Scaled by Animation
@@ -868,6 +877,20 @@ export const BocalView: React.FC = () => {
                             -drawSize / 2,
                             drawSize,
                             drawSize
+                        )
+
+                    } else if (denomination.type === 'ingot') {
+                        // INGOTS
+                        const zoom = 1.35 * animScale
+                        const drawSizeW = (denomination.width * scale) * zoom * 1.1 // Stretched length by 10%
+                        const drawSizeH = (denomination.height * scale) * zoom * 1.2 // Stretched height by 20% total
+
+                        context.drawImage(
+                            img,
+                            -drawSizeW / 2,
+                            -drawSizeH / 2,
+                            drawSizeW,
+                            drawSizeH
                         )
 
                     } else {
@@ -883,16 +906,6 @@ export const BocalView: React.FC = () => {
                             drawSize,
                             drawSize
                         )
-
-                        // Debug Outline (Rectangular Hitbox)
-                        context.strokeStyle = 'rgba(255, 165, 0, 0.5)' // Orange
-                        context.lineWidth = 1
-                        context.beginPath()
-                        const hitW = denomination.width * scale
-                        const hitH = denomination.height * scale
-                        const radius = 5 * scale
-                        context.roundRect(-hitW / 2, -hitH / 2, hitW, hitH, radius)
-                        context.stroke()
                     }
 
                     // Reset Filter
@@ -934,8 +947,14 @@ export const BocalView: React.FC = () => {
                 context.globalAlpha = ghost.life // FADE OUT
 
                 const scale = scaleRef.current
-                const img = new Image()
-                img.src = ghost.texture
+
+                // GET OR CREATE CACHED IMAGE
+                let img = imageCache.current.get(ghost.texture)
+                if (!img) {
+                    img = new Image()
+                    img.src = ghost.texture
+                    imageCache.current.set(ghost.texture, img)
+                }
 
                 if (ghost.type === 'coin') {
                     // Coins: MUST CLIP to match the alive item's visual size
