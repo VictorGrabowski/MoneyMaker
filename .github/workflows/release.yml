@@ -28,7 +28,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
 
       - name: Bump version
-        run: npm version patch -m "chore: bump version to %s [skip ci]"
+        run: |
+          npm version patch -m "chore: bump version to %s [skip ci]"
 
       - name: Push changes
         uses: ad-m/github-push-action@master
