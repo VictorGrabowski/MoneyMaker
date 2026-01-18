@@ -13,19 +13,48 @@ interface SalaryState {
     workingDays: number[] // 0=Sun, 1=Mon, ..., 6=Sat
     workStartHour: number // 0-23
     workEndHour: number // 0-24
+    lunchBreakDuration: number // in minutes
+    lunchBreakStartHour: number // e.g. 12.0
+    monthlyHours: number
     setMonthlyNet: (net: number) => void
     setViewMode: (mode: 'setup' | 'widget' | 'bocal') => void
     setBocalMode: (mode: 'daily' | 'monthly') => void
     setHasInitializedBocal: (initialized: boolean) => void
     setWorkingDays: (days: number[]) => void
     setWorkHours: (start: number, end: number) => void
+    setLunchBreak: (duration: number, start: number) => void
     tick: (ms: number) => void
     loadSalaryData: () => Promise<void>
+    saveSettings: () => void
 }
 
-// Fixed constant for 39h/week: (39 * 52) / 12 = 169h/month
-const HOURS_PER_MONTH_39H = 169
-const COIN_THRESHOLD = 0.01 // Spawn a coin every 1 cent
+export const calculateEffectiveDailyHours = (start: number, end: number, lunchDurationMinutes: number, lunchStartHour: number) => {
+    // Convert all to minutes for easier intersection logic
+    const startMins = start * 60
+    const endMins = end * 60
+    const lunchStartMins = lunchStartHour * 60
+    const lunchEndMins = lunchStartMins + lunchDurationMinutes
+
+    // Check strict validity
+    if (endMins <= startMins) return 0
+
+    // Intersection of Work and Lunch
+    const overlapStart = Math.max(startMins, lunchStartMins)
+    const overlapEnd = Math.min(endMins, lunchEndMins)
+    const overlapMins = Math.max(0, overlapEnd - overlapStart)
+
+    const totalWorkMins = endMins - startMins
+    const effectiveMins = Math.max(0, totalWorkMins - overlapMins)
+
+    return effectiveMins / 60
+}
+
+const calculateMonthlyHours = (days: number[], start: number, end: number, lunchDurationMinutes: number, lunchStartHour: number) => {
+    const effectiveHoursPerDay = calculateEffectiveDailyHours(start, end, lunchDurationMinutes, lunchStartHour)
+    const daysPerWeek = days.length
+    // Average hours per year: (Weekly Hours * 52) / 12
+    return (daysPerWeek * effectiveHoursPerDay * 52) / 12
+}
 
 export const useSalaryStore = create<SalaryState>((set, get) => ({
     wage: 0,
@@ -40,11 +69,17 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
     workingDays: [1, 2, 3, 4, 5], // Default Mon-Fri
     workStartHour: 9,
     workEndHour: 17,
-    setMonthlyNet: (net: number) => {
-        const hourlyRate = net / HOURS_PER_MONTH_39H
-        const { workStartHour, workEndHour, workingDays } = get()
+    lunchBreakDuration: 0,
+    lunchBreakStartHour: 12,
+    monthlyHours: 169, // Default 39h/week approx
 
-        // Calculate earnings since Start Hour today, capped at End Hour
+    setMonthlyNet: (net: number) => {
+        const { monthlyHours } = get()
+        const safeMonthlyHours = monthlyHours || 1 // Avoid division by zero
+        const hourlyRate = net / safeMonthlyHours
+
+        // Update calculations immediately
+        const { workStartHour, workEndHour, workingDays } = get()
         const now = new Date()
         const currentDay = now.getDay()
         let earnedSinceStart = 0
@@ -52,14 +87,9 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
         if (workingDays.includes(currentDay)) {
             const todayStart = new Date(now)
             todayStart.setHours(workStartHour, 0, 0, 0)
-
             const todayEnd = new Date(now)
             todayEnd.setHours(workEndHour, 0, 0, 0)
-
-            // If now is past End Hour, we cap the calculation time at End Hour
             const calcTime = now > todayEnd ? todayEnd : now
-
-            // If now is before Start Hour, calcTime < todayStart -> msSinceStart = 0
             const msSinceStart = Math.max(0, calcTime.getTime() - todayStart.getTime())
             earnedSinceStart = (hourlyRate / (60 * 60 * 1000)) * msSinceStart
         }
@@ -68,32 +98,77 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
             monthlyNet: net,
             wage: hourlyRate,
             accumulated: earnedSinceStart,
-            dailyAccumulated: earnedSinceStart, // Initialize daily
+            dailyAccumulated: earnedSinceStart,
             displayedAccumulated: 0,
             isCatchingUp: earnedSinceStart > 0,
             hasInitializedBocal: false
         })
 
-        if (window.electron) {
-            window.electron.setWage(hourlyRate)
-        }
+        // NOTE: We do NOT auto-save here anymore, as the user wants explicit Save button behavior for settings
     },
+
     setViewMode: (mode) => {
         set({ viewMode: mode })
         if (window.electron) {
             window.electron.switchWindowMode(mode === 'widget' ? 'widget' : 'main')
         }
     },
+
     setBocalMode: (mode) => {
         set({ bocalMode: mode, hasInitializedBocal: false })
     },
+
     setHasInitializedBocal: (initialized) => {
         set({ hasInitializedBocal: initialized })
     },
-    setWorkingDays: (days) => set({ workingDays: days }),
-    setWorkHours: (start, end) => set({ workStartHour: start, workEndHour: end }),
+
+    setWorkingDays: (days) => {
+        const { workStartHour, workEndHour, monthlyNet, lunchBreakDuration, lunchBreakStartHour } = get()
+        const newMonthlyHours = calculateMonthlyHours(days, workStartHour, workEndHour, lunchBreakDuration, lunchBreakStartHour)
+        const safeMonthlyHours = newMonthlyHours || 1
+
+        // If monthly net is set, we adjust wage to keep net constant.
+        // If wage was set but net wasn't (initial load), we interpret current logic as "Fixed Net, Variable Wage"
+        const newWage = monthlyNet / safeMonthlyHours
+
+        set({
+            workingDays: days,
+            monthlyHours: newMonthlyHours,
+            wage: newWage
+        })
+    },
+
+    setWorkHours: (start, end) => {
+        const { workingDays, monthlyNet, lunchBreakDuration, lunchBreakStartHour } = get()
+        const newMonthlyHours = calculateMonthlyHours(workingDays, start, end, lunchBreakDuration, lunchBreakStartHour)
+        const safeMonthlyHours = newMonthlyHours || 1
+
+        const newWage = monthlyNet / safeMonthlyHours
+
+        set({
+            workStartHour: start,
+            workEndHour: end,
+            monthlyHours: newMonthlyHours,
+            wage: newWage
+        })
+    },
+
+    setLunchBreak: (duration, start) => {
+        const { workingDays, monthlyNet, workStartHour, workEndHour } = get()
+        const newMonthlyHours = calculateMonthlyHours(workingDays, workStartHour, workEndHour, duration, start)
+        const safeMonthlyHours = newMonthlyHours || 1
+        const newWage = monthlyNet / safeMonthlyHours
+
+        set({
+            lunchBreakDuration: duration,
+            lunchBreakStartHour: start,
+            monthlyHours: newMonthlyHours,
+            wage: newWage
+        })
+    },
+
     tick: (ms) => {
-        const { wage, dailyAccumulated, displayedAccumulated, isCatchingUp, bocalMode, workingDays, workStartHour, workEndHour } = get()
+        const { wage, dailyAccumulated, displayedAccumulated, isCatchingUp, bocalMode, workingDays, workStartHour, workEndHour, lunchBreakDuration, lunchBreakStartHour } = get()
         if (wage <= 0) return
 
         // 1. Update real accumulated
@@ -101,6 +176,8 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
 
         const now = new Date()
         const currentHour = now.getHours()
+        const currentMinute = now.getMinutes()
+        const currentTotalMinutes = currentHour * 60 + currentMinute
         const currentDayOfWeek = now.getDay() // 0 = Sun, 6 = Sat
 
         let nextDailyAccumulated = dailyAccumulated
@@ -112,7 +189,12 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
         const isWorkingTime = currentHour >= workStartHour && currentHour < workEndHour
         const isWorkingDay = workingDays.includes(currentDayOfWeek)
 
-        if (isWorkingTime && isWorkingDay) {
+        // Lunch check
+        const lunchStartMinutes = lunchBreakStartHour * 60
+        const lunchEndMinutes = lunchStartMinutes + lunchBreakDuration
+        const isLunchBreak = currentTotalMinutes >= lunchStartMinutes && currentTotalMinutes < lunchEndMinutes
+
+        if (isWorkingTime && isWorkingDay && !isLunchBreak) {
             nextDailyAccumulated = dailyAccumulated + (earnedPerMs * ms)
         }
 
@@ -130,8 +212,9 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
             }
         }
 
-        const dailyHours = workEndHour - workStartHour
-        const hoursPrior = workingDaysPrior * dailyHours
+        const dailyActiveHours = (workEndHour - workStartHour) - (lunchBreakDuration / 60)
+        const effectiveDailyHours = Math.max(0, dailyActiveHours)
+        const hoursPrior = workingDaysPrior * effectiveDailyHours
         const monthlyBaseline = hoursPrior * wage
 
         const nextMonthlyAccumulated = monthlyBaseline + nextDailyAccumulated
@@ -171,44 +254,85 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
             isCatchingUp: nextIsCatchingUp
         })
     },
+
     loadSalaryData: async () => {
         if (!window.electron) return
-        const wage = await window.electron.getWage()
-        const net = wage * HOURS_PER_MONTH_39H
 
-        /* 
-           We can't easily access the store state here via `get()` in the create callback 
-           without casting, but we can assume defaults or use set state if we split logic.
-           However, simplest is to re-read state inside the component or just assume defaults
-           for initial load, OR better: use `get()` which IS available.
-           Wait, `loadSalaryData` is defined in `create((set, get) => ...)` so `get` IS available.
-        */
-        const { workStartHour, workEndHour, workingDays } = get()
+        try {
+            const wage = await window.electron.getWage()
+            const workingDays = await window.electron.getWorkingDays() || [1, 2, 3, 4, 5]
+            const workHours = await window.electron.getWorkHours() || { start: 9, end: 17 }
+            const lunchBreak = await window.electron.getLunchBreak() || { duration: 0, start: 12 }
 
-        const now = new Date()
-        const currentDay = now.getDay()
-        let earnedSinceStart = 0
+            const monthlyHours = calculateMonthlyHours(workingDays, workHours.start, workHours.end, lunchBreak.duration, lunchBreak.start)
 
-        if (workingDays.includes(currentDay)) {
-            const todayStart = new Date(now)
-            todayStart.setHours(workStartHour, 0, 0, 0)
+            // Recalculate net from wage for display, although we generally drive wage from net.
+            // If we only store wage, we must derive net.
+            const net = wage * monthlyHours
 
-            const todayEnd = new Date(now)
-            todayEnd.setHours(workEndHour, 0, 0, 0)
+            const now = new Date()
+            const currentDay = now.getDay()
+            let earnedSinceStart = 0
 
-            const calcTime = now > todayEnd ? todayEnd : now
-            const msSinceStart = Math.max(0, calcTime.getTime() - todayStart.getTime())
-            earnedSinceStart = (wage / (60 * 60 * 1000)) * msSinceStart
+            if (workingDays.includes(currentDay)) {
+                const todayStart = new Date(now)
+                todayStart.setHours(workHours.start, 0, 0, 0)
+
+                const todayEnd = new Date(now)
+                todayEnd.setHours(workHours.end, 0, 0, 0)
+
+                const current = now > todayEnd ? todayEnd : now
+
+                const startMins = workHours.start * 60
+                const curMins = current.getHours() * 60 + current.getMinutes()
+
+                const lunchStartMins = lunchBreak.start * 60
+                const lunchEndMins = lunchStartMins + lunchBreak.duration
+
+                // Interval intersection: [start, cur] INTERSECT [lunchStart, lunchEnd]
+                const overlapStart = Math.max(startMins, lunchStartMins)
+                const overlapEnd = Math.min(curMins, lunchEndMins)
+                const overlap = Math.max(0, overlapEnd - overlapStart)
+
+                const rawWorkedMinutes = Math.max(0, curMins - startMins)
+                const effectiveWorkedMinutes = Math.max(0, rawWorkedMinutes - overlap)
+
+                earnedSinceStart = (wage / 60) * effectiveWorkedMinutes * (60 * 1000) // Convert mins to ms for consistency or just calculate directly: wage per hour / 60 = wage per minute. * minutes. The store expects accumulated in CURRENCY UNITS?
+                // Wait, wage is hourly rate. 
+                // earnedSinceStart in store is Currency.
+                // (wage / 60) * minutes is correct.
+                earnedSinceStart = (wage / 60) * effectiveWorkedMinutes
+            }
+
+            set({
+                wage,
+                monthlyNet: net,
+                workingDays,
+                workStartHour: workHours.start,
+                workEndHour: workHours.end,
+                lunchBreakDuration: lunchBreak.duration,
+                lunchBreakStartHour: lunchBreak.start,
+                monthlyHours,
+                accumulated: earnedSinceStart,
+                dailyAccumulated: earnedSinceStart,
+                displayedAccumulated: 0,
+                isCatchingUp: earnedSinceStart > 0,
+                hasInitializedBocal: false
+            })
+        } catch (error) {
+            console.error("Failed to load salary data:", error)
         }
+    },
 
-        set({
-            wage,
-            monthlyNet: net,
-            accumulated: earnedSinceStart,
-            dailyAccumulated: earnedSinceStart,
-            displayedAccumulated: 0,
-            isCatchingUp: earnedSinceStart > 0,
-            hasInitializedBocal: false
-        })
+    saveSettings: () => {
+        if (!window.electron) return
+        const { wage, workingDays, workStartHour, workEndHour, lunchBreakDuration, lunchBreakStartHour } = get()
+
+        window.electron.setWage(wage)
+        if (window.electron.setWorkingDays) window.electron.setWorkingDays(workingDays)
+        if (window.electron.setWorkHours) window.electron.setWorkHours({ start: workStartHour, end: workEndHour })
+        if (window.electron.setLunchBreak) window.electron.setLunchBreak({ duration: lunchBreakDuration, start: lunchBreakStartHour })
+
+        console.log("Settings saved:", { wage, workingDays, start: workStartHour, end: workEndHour, lunch: lunchBreakDuration })
     }
 }))

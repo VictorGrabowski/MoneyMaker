@@ -1,11 +1,14 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useSalaryStore } from '../store/salaryStore'
+import { useCookingStore } from '../store/cookingStore'
 import { useWeatherStore } from '../store/weatherStore'
-import { Settings2 } from 'lucide-react'
+import { Maximize2, Timer } from 'lucide-react'
 
 export const MoneyWidget: React.FC = () => {
     const { displayedAccumulated, tick, setViewMode } = useSalaryStore()
     const { isDay, condition } = useWeatherStore()
+    const { status: cookingStatus, startTime, duration, checkBakingStatus } = useCookingStore()
+    const [isHovered, setIsHovered] = useState(false)
     const lastTick = useRef<number>(Date.now())
 
     // WEATHER CANVAS
@@ -19,6 +22,10 @@ export const MoneyWidget: React.FC = () => {
             const now = Date.now()
             const delta = now - lastTick.current
             tick(delta)
+
+            // Check cooking status regularly
+            checkBakingStatus()
+
             lastTick.current = now
         }, 16)
 
@@ -100,8 +107,26 @@ export const MoneyWidget: React.FC = () => {
         return () => cancelAnimationFrame(frameIdRef.current)
     }, [condition])
 
+    // Hover Logic with Debounce
+    const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    const handleMouseEnter = () => {
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current)
+            hoverTimeoutRef.current = null
+        }
+        setIsHovered(true)
+    }
+
+    const handleMouseLeave = () => {
+        hoverTimeoutRef.current = setTimeout(() => {
+            setIsHovered(false)
+        }, 100)
+    }
+
     return (
-        <div className={`group relative w-[250px] h-[100px] flex items-center justify-center 
+        <div
+            className={`group relative w-[250px] h-[100px] flex items-center justify-center 
             ${isDay ? 'bg-white/10 border-white/20' : 'bg-black/10 border-white/10'} 
             backdrop-blur-xl border rounded-2xl overflow-hidden selection:bg-none no-drag transition-colors duration-1000 shadow-lg`}>
 
@@ -117,7 +142,12 @@ export const MoneyWidget: React.FC = () => {
             <div className="absolute inset-0 cursor-move" style={{ WebkitAppRegion: 'drag' } as any} />
 
             {/* Content */}
-            <div className="relative z-10 flex flex-col items-center pointer-events-none select-none">
+            <div
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                className="relative z-10 flex flex-col items-center pointer-events-auto select-none"
+                style={{ WebkitAppRegion: 'drag' } as any}
+            >
                 <div
                     className={`text-[10px] font-bold uppercase tracking-[0.3em] mb-1 opacity-90 ${isDay ? 'text-sky-200' : 'text-indigo-300'}`}
                     style={{ textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
@@ -130,15 +160,34 @@ export const MoneyWidget: React.FC = () => {
                 >
                     {displayedAccumulated.toFixed(4)}<span className={`ml-1 ${isDay ? 'text-sky-300' : 'text-indigo-400'}`}>€</span>
                 </div>
+
+                {/* POMODORO TIMER */}
+                {cookingStatus === 'baking' && startTime && (
+                    <div className="flex items-center gap-2 mt-2 px-3 py-1 rounded-full bg-black/40 border border-white/10 shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-bottom-2">
+                        <Timer size={12} className="text-orange-400 animate-pulse" />
+                        <span className="text-sm font-mono font-bold text-orange-100 tabular-nums">
+                            {(() => {
+                                const elapsed = Date.now() - startTime
+                                const remaining = Math.max(0, duration - elapsed)
+                                const totalSeconds = Math.floor(remaining / 1000)
+                                const m = Math.floor(totalSeconds / 60)
+                                const s = totalSeconds % 60
+                                return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+                            })()}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Back Button */}
             <button
                 onClick={() => setViewMode('setup')}
-                className="absolute top-2 right-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/20 hover:text-white transition-all duration-300 opacity-0 group-hover:opacity-100 no-drag pointer-events-auto"
-                title="Paramètres"
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                className={`absolute top-2 left-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/20 hover:text-white transition-all duration-300 no-drag pointer-events-auto ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+                title="Agrandir"
             >
-                <Settings2 size={14} />
+                <Maximize2 size={14} />
             </button>
 
             {/* Animated Glow Bottom */}

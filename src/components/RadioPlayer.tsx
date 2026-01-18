@@ -156,11 +156,11 @@ export const RadioPlayer: React.FC = () => {
             // We use z-0 so it sits behind the widget content (if widget has transparency)
             // But RadioPlayer is rendered BEFORE content in App.tsx, so it is naturally behind.
             // We just need to make it fill screen.
-            return "fixed inset-0 w-full h-full z-[-1] opacity-80"
+            return "absolute inset-0 w-full h-full z-[-1] opacity-80"
         } else {
             // Main Mode: PiP Bottom Right
             // z-[60] to be above other UI elements (Hub nav is z-50)
-            return "fixed bottom-6 right-6 w-80 aspect-video rounded-xl overflow-hidden shadow-2xl z-[60] border border-white/10 transition-all duration-500 animate-in slide-in-from-bottom-10 fade-in"
+            return "absolute bottom-6 right-6 w-80 aspect-video rounded-xl overflow-hidden shadow-2xl z-[60] border border-white/10 transition-all duration-500 animate-in slide-in-from-bottom-10 fade-in"
         }
     }
 

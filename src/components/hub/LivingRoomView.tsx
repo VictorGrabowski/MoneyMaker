@@ -39,7 +39,7 @@ const OvenTimer = () => {
     return (
         <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
             <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.4)]">
-                <span className="text-orange-400 font-mono font-bold text-lg animate-pulse">{timeLeft}</span>
+                <span className="text-white text-outline font-mono font-bold text-lg animate-pulse">{timeLeft}</span>
             </div>
             <div className="w-[80%] h-1 bg-gray-700 mt-2 rounded-full overflow-hidden">
                 <div

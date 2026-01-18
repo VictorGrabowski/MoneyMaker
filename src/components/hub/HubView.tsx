@@ -4,6 +4,7 @@ import { LivingRoomView } from './LivingRoomView'
 import { KitchenView } from './KitchenView'
 import { Briefcase, Sofa, Coffee } from 'lucide-react'
 import { useWeatherStore } from '../../store/weatherStore'
+import bureauBg from '../../assets/hub/bureau_bg.png'
 
 type Zone = 'office' | 'living-room' | 'kitchen'
 
@@ -25,7 +26,8 @@ export const HubView: React.FC = () => {
 
             // Apply transforms directly without triggering React re-renders
             requestAnimationFrame(() => {
-                if (contentRef.current) contentRef.current.style.transform = `translate(${-x * 0.5}px, ${-y * 0.5}px)`
+                // Scale 1.05 to prevent edges from showing during parallax movement
+                if (contentRef.current) contentRef.current.style.transform = `translate(${-x * 0.5}px, ${-y * 0.5}px) scale(1.05)`
                 if (blob1Ref.current) blob1Ref.current.style.transform = `translate(${x * 2}px, ${y * 2}px)`
                 if (blob2Ref.current) blob2Ref.current.style.transform = `translate(${x * 1.5}px, ${y * 1.5}px)`
             })
@@ -47,6 +49,14 @@ export const HubView: React.FC = () => {
         <div
             className={`relative w-full h-full min-h-screen flex flex-col items-center justify-center overflow-hidden transition-colors duration-1000 ${isDay ? 'bg-sky-900' : 'bg-slate-950'} text-white`}
         >
+            {/* Background Image */}
+            <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
+                style={{ backgroundImage: `url(${bureauBg})` }}
+            />
+            {/* Dark overlay for better text readability */}
+            <div className={`absolute inset-0 z-0 transition-opacity duration-1000 ${isDay ? 'bg-black/20' : 'bg-black/40'}`} />
+
             {/* Draggable Background Area - Placed FIRST to sit behind content */}
             <div className="absolute top-0 left-0 right-0 h-32 drag z-0" />
 

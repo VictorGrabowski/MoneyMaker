@@ -23,6 +23,12 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 contextBridge.exposeInMainWorld('electron', {
     getWage: () => ipcRenderer.invoke('get-wage'),
     setWage: (value: number) => ipcRenderer.send('set-wage', value),
+    getWorkingDays: () => ipcRenderer.invoke('get-working-days'),
+    setWorkingDays: (value: number[]) => ipcRenderer.send('set-working-days', value),
+    getWorkHours: () => ipcRenderer.invoke('get-work-hours'),
+    setWorkHours: (value: { start: number, end: number }) => ipcRenderer.send('set-work-hours', value),
+    getLunchBreak: () => ipcRenderer.invoke('get-lunch-break'),
+    setLunchBreak: (value: { duration: number, start: number }) => ipcRenderer.send('set-lunch-break', value),
     getLastSeen: () => ipcRenderer.invoke('get-last-seen'),
     setLastSeen: (value: number) => ipcRenderer.send('set-last-seen', value),
     switchWindowMode: (mode: 'main' | 'widget') => ipcRenderer.send('switch-window-mode', mode),

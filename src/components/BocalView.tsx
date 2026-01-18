@@ -3,11 +3,15 @@ import Matter from 'matter-js'
 import { useSalaryStore } from '../store/salaryStore'
 import { useImmersionStore, RADIO_STATIONS } from '../store/immersionStore'
 import { useWeatherStore } from '../store/weatherStore'
+import { BureauControls } from './hub/BureauControls'
 import { WeatherLayer } from './WeatherLayer'
 import { FpsCounter } from './FpsCounter'
-import { ArrowLeft, RefreshCw, Radio, SkipForward, Volume2, VolumeX, CloudRain, CloudSnow, Sun, Moon } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Radio, SkipForward, Volume2, VolumeX, CloudRain, CloudSnow, Sun, Moon, ZoomIn, ZoomOut } from 'lucide-react'
+import Slider from 'rc-slider'
+import 'rc-slider/assets/index.css'
 
 // Asset Imports
+import imgBocalEnv from '../assets/hub/bocal_env.png'
 import imgCoin1 from '../assets/money/coin_1.png'
 import imgCoin2 from '../assets/money/coin_2.png'
 import imgCoinCopper from '../assets/money/coin_copper_generic.png'
@@ -21,98 +25,7 @@ import imgBill200 from '../assets/money/bill_200.png'
 import imgBill500 from '../assets/money/bill_500.png'
 import imgIngotGold from '../assets/hub/golden_bar.png'
 
-// --- RADIO CONTROLS COMPONENT ---
-const RadioControls = () => {
-    const { isRadioOn, toggleRadio, currentStationIndex, nextStation, volume, setVolume } = useImmersionStore()
-    const station = RADIO_STATIONS[currentStationIndex]
 
-    return (
-        <div className="flex flex-col gap-4 bg-black/40 p-4 rounded-2xl backdrop-blur-xl border border-white/10 w-64">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-indigo-300">
-                    <Radio size={20} className={isRadioOn ? "animate-pulse" : "opacity-50"} />
-                    <span className="font-bold uppercase tracking-wider text-xs">Ondes FM</span>
-                </div>
-                <button
-                    onClick={toggleRadio}
-                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${isRadioOn ? 'bg-green-500' : 'bg-slate-700'}`}
-                >
-                    <div className={`w-4 h-4 rounded-full bg-white shadow-md transition-transform ${isRadioOn ? 'translate-x-4' : 'translate-x-0'}`} />
-                </button>
-            </div>
-
-            {isRadioOn && (
-                <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="bg-black/50 p-3 rounded-lg border border-white/5 relative overflow-hidden group">
-                        <div className="text-sm font-bold text-white truncate">{station.name}</div>
-                        <div className="text-xs text-slate-400 truncate">{station.style}</div>
-
-                        <button
-                            onClick={nextStation}
-                            className="absolute right-0 top-0 bottom-0 px-3 bg-white/5 hover:bg-white/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
-                        >
-                            <SkipForward size={16} />
-                        </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setVolume(volume === 0 ? 0.5 : 0)} className="text-slate-400 hover:text-white transition-colors">
-                            {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                        </button>
-                        <input
-                            type="range"
-                            min="0"
-                            max="0.5"
-                            step="0.05"
-                            value={volume}
-                            onChange={(e) => setVolume(parseFloat(e.target.value))}
-                            className="flex-1 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
-const WeatherControls = () => {
-    const { condition, isDay, setWeather, toggleDayNight } = useWeatherStore()
-
-    return (
-        <div className="flex flex-col gap-4 bg-black/40 p-4 rounded-2xl backdrop-blur-xl border border-white/10 w-64">
-            <div className="flex items-center gap-3 text-sky-300 mb-2">
-                <Sun size={20} className={isDay ? "text-yellow-400" : "text-slate-400"} />
-                <span className="font-bold uppercase tracking-wider text-xs">Météo (Debug)</span>
-            </div>
-
-            <div className="flex justify-between gap-2">
-                <button
-                    onClick={toggleDayNight}
-                    className={`p-3 rounded-xl transition-all border border-white/10 flex-1 flex justify-center ${isDay ? 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700/80'}`}
-                    title={isDay ? "Passer à la nuit" : "Passer au jour"}
-                >
-                    {isDay ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
-
-                <button
-                    onClick={() => setWeather(condition === 'rain' ? 'clear' : 'rain')}
-                    className={`p-3 rounded-xl transition-all border border-white/10 flex-1 flex justify-center ${condition === 'rain' ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 ring-1 ring-blue-500/50' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700/80'}`}
-                    title="Pluie"
-                >
-                    <CloudRain size={20} />
-                </button>
-
-                <button
-                    onClick={() => setWeather(condition === 'snow' ? 'clear' : 'snow')}
-                    className={`p-3 rounded-xl transition-all border border-white/10 flex-1 flex justify-center ${condition === 'snow' ? 'bg-white/10 text-white hover:bg-white/20 ring-1 ring-white/30' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700/80'}`}
-                    title="Neige"
-                >
-                    <CloudSnow size={20} />
-                </button>
-            </div>
-        </div>
-    )
-}
 
 interface ItemConfig {
     value: number
@@ -146,6 +59,16 @@ const DENOMINATIONS: ItemConfig[] = [
     { value: 0.02, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 75, height: 75, displayText: '2', texture: imgCoinCopper },
     { value: 0.01, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 65, height: 65, displayText: '1', texture: imgCoinCopper },
 ]
+
+// Sorted by value ascending for slider display
+const DENOMINATIONS_SORTED = [...DENOMINATIONS].sort((a, b) => a.value - b.value)
+
+// Labels for slider
+const getDenominationLabel = (value: number): string => {
+    if (value >= 1000) return `${value / 1000}k€`
+    if (value >= 1) return `${value}€`
+    return `${Math.round(value * 100)}c`
+}
 
 const MERGE_RECIPES: { inputs: number[], outputs: number[] }[] = [
     { inputs: [0.01, 0.01], outputs: [0.02] },
@@ -191,11 +114,11 @@ interface MoneyBody extends Matter.Body {
 
 // Memoized Jar Decoration to avoid expensive re-renders
 // Import visual assets
-import imgBocalEnv from '../assets/hub/bocal_env.png'
+
 
 
 // Memoized Jar Decoration to avoid expensive re-renders
-const JarDecoration = memo(({ jarRef }: { jarRef: React.RefObject<HTMLDivElement> }) => {
+const JarDecoration = memo(({ jarRef }: { jarRef: React.Ref<HTMLDivElement> }) => {
     const jarPath = "M135 10C135 4.47715 139.477 0 145 0H305C310.523 0 315 4.47715 315 10V70C315 75 320 80 340 90C390 115 450 150 450 250V520C450 564.183 414.183 600 370 600H80C35.8172 600 0 564.183 0 520V250C0 150 60 115 110 90C130 80 135 75 135 70V10Z"
 
     return (
@@ -205,7 +128,7 @@ const JarDecoration = memo(({ jarRef }: { jarRef: React.RefObject<HTMLDivElement
         >
             {/* Glass Effect Container (Clipped to Jar Shape) */}
             <div
-                className="absolute inset-0 z-20 backdrop-blur-[0.5px]"
+                className="absolute inset-0 z-30"
                 style={{ clipPath: `path('${jarPath}')` }}
             >
                 {/* Reflection/Lighting Gradient (Light from behind/left) */}
@@ -220,7 +143,7 @@ const JarDecoration = memo(({ jarRef }: { jarRef: React.RefObject<HTMLDivElement
                 viewBox="0 0 450 600"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="absolute inset-0 w-full h-full z-30 pointer-events-none"
+                className="absolute inset-0 w-full h-full z-40 pointer-events-none"
             >
                 <defs>
                     <linearGradient id="glassEdge" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -253,29 +176,34 @@ const ScoreDisplay = () => {
     const bocalMode = useSalaryStore(s => s.bocalMode)
     return (
         <div className="mt-8 text-center z-[60]">
-            <div className="text-7xl font-black text-white tabular-nums drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] flex items-baseline gap-3 justify-center">
-                {displayedAccumulated.toFixed(2)}<span className="text-indigo-400 text-4xl">€</span>
+            <div className="text-7xl font-black text-white text-outline tabular-nums drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] flex items-baseline gap-3 justify-center">
+                {displayedAccumulated.toFixed(2)}<span className="text-white text-outline text-4xl">€</span>
             </div>
-            <div className="text-[14px] text-indigo-300 font-bold uppercase tracking-[0.6em] opacity-80 mt-2">
+            <div className="text-[14px] text-white text-outline font-bold uppercase tracking-[0.6em] opacity-80 mt-2">
                 {bocalMode === 'daily' ? 'Economies du Jour' : 'Economies du Mois'}
             </div>
         </div>
     )
 }
 
+
 export const BocalView: React.FC = () => {
     const sceneRef = useRef<HTMLDivElement>(null)
     const jarRef = useRef<HTMLDivElement>(null)
-    const engineRef = useRef<Matter.Engine>(Matter.Engine.create({
-        enableSleeping: true,
-        positionIterations: 20, // High precision but safe for 60fps
-        velocityIterations: 20  // High precision but safe for 60fps
-    }))
+
+    // LAZY INITIALIZATION of Engine to prevent leaks/crashes on re-renders
+    const engineRef = useRef<Matter.Engine | null>(null)
+    if (!engineRef.current) {
+        engineRef.current = Matter.Engine.create({
+            enableSleeping: true,
+            positionIterations: 20,
+            velocityIterations: 20
+        })
+    }
 
     const itemsRef = useRef<MoneyBody[]>([])
     const wallsRef = useRef<Matter.Body[]>([])
 
-    // VISUAL EFFECTS
     // VISUAL EFFECTS
     type FadingGhost = {
         x: number, y: number, angle: number,
@@ -286,17 +214,69 @@ export const BocalView: React.FC = () => {
     const mouseConstraintRef = useRef<Matter.MouseConstraint | null>(null)
     const imageCache = useRef<Map<string, HTMLImageElement>>(new Map())
 
-    const scaleRef = useRef<number>(1) // Shared physics scale based on jar width
-    const [physicsScale, setPhysicsScale] = useState(0)
+    const scaleRef = useRef<number>(1)
+    const [physicsScale, setPhysicsScale] = useState(1)
     const [isShaking, setIsShaking] = useState(false)
-    const [resetTrigger, setResetTrigger] = useState(0) // Force re-eval of spawning logic on reset
+    const [resetTrigger, setResetTrigger] = useState(0)
+    const [zoomLevel, setZoomLevel] = useState(1) // ZOOM STATE
+    const zoomLevelRef = useRef(1)
+    const physicsScaleRef = useRef(1)
+
+    // SCROLL TO ZOOM HANDLER
+    const handleWheel = useCallback((e: React.WheelEvent) => {
+        // e.deltaY > 0 means scroll down (zoom out), e.deltaY < 0 means scroll up (zoom in)
+        const delta = -e.deltaY * 0.001
+
+        setZoomLevel(prev => {
+            const newZoom = Math.min(Math.max(prev + delta, 1), 1.4)
+            return parseFloat(newZoom.toFixed(2)) // Keep it clean
+        })
+    }, [])
+
+    // DENOMINATION CAP: Index in DENOMINATIONS_SORTED (0 = 1c, max = 💎)
+    const [maxDenomIndex, setMaxDenomIndex] = useState(DENOMINATIONS_SORTED.length - 1) // Default: all allowed
+    const maxDenomValueRef = useRef(DENOMINATIONS_SORTED[DENOMINATIONS_SORTED.length - 1].value)
+
+    // Sync ref when state changes + WAKE UP items when increasing limit
+    const prevMaxDenomIndex = useRef(DENOMINATIONS_SORTED.length - 1)
+    useEffect(() => {
+        const newValue = DENOMINATIONS_SORTED[maxDenomIndex].value
+        const oldValue = maxDenomValueRef.current
+        maxDenomValueRef.current = newValue
+
+        // If limit was INCREASED, wake up all sleeping items so they can merge
+        if (newValue > oldValue) {
+            itemsRef.current.forEach(item => {
+                if (item.isStatic || item.isSleeping) {
+                    Matter.Sleeping.set(item, false)
+                    Matter.Body.setStatic(item, false)
+                    item.isFrozen = false
+                    // Give a tiny impulse to trigger collision detection
+                    Matter.Body.applyForce(item, item.position, { x: 0, y: 0.0001 })
+                }
+            })
+        }
+
+        prevMaxDenomIndex.current = maxDenomIndex
+    }, [maxDenomIndex])
+
+
+    const lastWallConfig = useRef<{ w: number, h: number, x: number, y: number } | null>(null)
+    const jarObserverRef = useRef<ResizeObserver | null>(null)
+
+    // Sync Ref
+    useEffect(() => {
+        zoomLevelRef.current = zoomLevel
+        // updateWallPositions will check if effective dimensions actually changed
+        updateWallPositions()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [zoomLevel]) // updateWallPositions is stable via useCallback, removed to prevent circular deps
 
     const setViewMode = useSalaryStore(s => s.setViewMode)
     const tick = useSalaryStore(s => s.tick)
     const hasInitializedBocal = useSalaryStore(s => s.hasInitializedBocal)
     const setHasInitializedBocal = useSalaryStore(s => s.setHasInitializedBocal)
 
-    // Removed accumulated subscription to prevent 60fps re-renders
     const bocalMode = useSalaryStore(s => s.bocalMode)
     const isDay = useWeatherStore(s => s.isDay)
 
@@ -306,34 +286,64 @@ export const BocalView: React.FC = () => {
         if (item.isStatic) return
         Matter.Body.setStatic(item, true)
         item.isFrozen = true
-        // freezeTimeouts removed as it was undefined
     }, [])
 
     const wakeItem = useCallback((item: MoneyBody) => {
         if (!item.isFrozen) return
         Matter.Body.setStatic(item, false)
         item.isFrozen = false
-        // No timeout here - velocity check will re-freeze if needed
     }, [])
 
     const updateWallPositions = useCallback(() => {
         if (!jarRef.current || !engineRef.current) return
 
-        const rect = jarRef.current.getBoundingClientRect()
+        const scaledRect = jarRef.current.getBoundingClientRect()
+        if (scaledRect.width === 0 || scaledRect.height === 0) return
+
+        // Normalize rect back to scale=1
+        const zoom = zoomLevelRef.current
+        const effectiveWidth = scaledRect.width / zoom
+        const effectiveHeight = scaledRect.height / zoom
+        const effectiveLeft = (scaledRect.left - window.innerWidth / 2) / zoom + window.innerWidth / 2
+        const effectiveTop = (scaledRect.top - window.innerHeight / 2) / zoom + window.innerHeight / 2
+
+        // OPTIMIZATION & STABILITY:
+        // Provide Tolerance (0.5px) to avoid rebuilding walls on micro-fluctuations during zoom/layout
+        // This prevents "tunneling" where items fall through walls during the brief moment walls are removed/added.
+        // IMPORTANT: Skip this optimization if walls don't exist yet (initial load)
+        if (lastWallConfig.current && wallsRef.current.length > 0) {
+            const c = lastWallConfig.current
+            if (
+                Math.abs(c.w - effectiveWidth) < 0.5 &&
+                Math.abs(c.h - effectiveHeight) < 0.5 &&
+                Math.abs(c.x - effectiveLeft) < 0.5 &&
+                Math.abs(c.y - effectiveTop) < 0.5
+            ) {
+                return // Dimensions effectively unchanged, skip expensive physics update
+            }
+        }
+
+        // CRITICAL: If walls don't exist yet but we have invalid dimensions, skip and wait for proper layout
+        if (wallsRef.current.length === 0 && (effectiveWidth < 10 || effectiveHeight < 10)) {
+            return // Layout not ready yet, skip this call
+        }
+
+        // Update Cache
+        lastWallConfig.current = { w: effectiveWidth, h: effectiveHeight, x: effectiveLeft, y: effectiveTop }
+
         const world = engineRef.current.world
 
         if (wallsRef.current.length > 0) {
             Matter.World.remove(world, wallsRef.current)
         }
 
-        const mapX = (x: number) => rect.left + (x / 450) * rect.width
-        const mapY = (y: number) => rect.top + (y / 600) * rect.height
+        // Calculate Scale Factor
+        const scale = effectiveWidth / 1350
 
-        // REDUCED SCALE: Divisor 1350 (approx 1/3 of original 450)
-        const scale = rect.width / 1350
+        const mapX = (x: number) => effectiveLeft + (x / 450) * effectiveWidth
+        const mapY = (y: number) => effectiveTop + (y / 600) * effectiveHeight
 
-        // DYNAMIC ITEM RESCALING
-        // Provide "Wow" factor: items resize in real-time if window changes
+        // DYNAMIC ITEM RESCALING logic
         if (itemsRef.current.length > 0 && scaleRef.current !== scale && scaleRef.current > 0) {
             const ratio = scale / scaleRef.current
             if (isFinite(ratio) && Math.abs(ratio - 1) > 0.001) {
@@ -345,9 +355,21 @@ export const BocalView: React.FC = () => {
 
         scaleRef.current = scale
         setPhysicsScale(scale)
+        physicsScaleRef.current = scale
 
-        const wallOptions = { isStatic: true, render: { fillStyle: 'transparent' } }
-        const wallThick = 300 * scale // Doubled thickness to prevent tunneling
+        // Collision categories: walls = 0x0001, items = 0x0002
+        const CATEGORY_WALL = 0x0001
+        const CATEGORY_ITEM = 0x0002
+
+        const wallOptions = {
+            isStatic: true,
+            render: { fillStyle: 'transparent' }, // Hidden
+            collisionFilter: {
+                category: CATEGORY_WALL,
+                mask: CATEGORY_ITEM | CATEGORY_WALL // Walls collide with items and other walls
+            }
+        }
+        const wallThick = 300 * scale
 
         const newWalls: Matter.Body[] = []
 
@@ -370,10 +392,11 @@ export const BocalView: React.FC = () => {
             newWalls.push(body)
         }
 
-        addSegment(305, -1000, 305, 80)
-        addSegment(135, 80, 135, -1000)
-        addSegment(350, -100, 305, 0)
-        addSegment(135, 0, 90, -100)
+        // Neck walls - height matches the visible jar texture (starts at y=0 instead of -50)
+        addSegment(305, 0, 305, 80)   // Right neck wall
+        addSegment(135, 80, 135, 0)   // Left neck wall
+        addSegment(350, 0, 305, 0)    // Right upper funnel (Flat rim)
+        addSegment(135, 0, 90, 0)     // Left upper funnel (Flat rim)
         addSegment(305, 80, 340, 100)
         addSegment(340, 100, 450, 255)
         addSegment(100, 100, 135, 80)
@@ -386,20 +409,12 @@ export const BocalView: React.FC = () => {
         addSegment(80, 600, 30, 575)
         addSegment(30, 575, 0, 520)
 
-        // Create Global Floor (The table/ground upon which the jar sits/money spills)
-        const floorY = mapY(600) + 10 // Slightly below jar bottom
-        const globalFloor = Matter.Bodies.rectangle(mapX(225), floorY, window.innerWidth * 2, 50, {
-            isStatic: true,
-            render: { fillStyle: 'transparent' }, // Invisible floor
-            label: 'GlobalFloor'
-        })
-        newWalls.push(globalFloor)
-
         wallsRef.current = newWalls
         Matter.World.add(world, newWalls)
-    }, [])
+    }, []) // REMOVED zoomLevel dependency, it is accessed via Ref
 
     const handleResetJar = useCallback(() => {
+        if (!engineRef.current) return
         const world = engineRef.current.world
         Matter.World.clear(world, false)
         itemsRef.current = []
@@ -407,8 +422,9 @@ export const BocalView: React.FC = () => {
         spawnTimeoutsRef.current.forEach(clearTimeout)
         spawnTimeoutsRef.current = []
 
-        // REBUILD WALLS: They were removed by World.clear(..., false)
+        // FORCE WALL REBUILD
         wallsRef.current = []
+        lastWallConfig.current = null
         updateWallPositions()
 
         // RE-ADD MOUSE CONSTRAINT (It was removed by World.clear)
@@ -427,6 +443,7 @@ export const BocalView: React.FC = () => {
         // 2. Allow it to refill efficiently ("CatchUp" mode with large bills)
 
         // Call reset logic manually to avoid setting hasManuallyEmptied = true
+        if (!engineRef.current) return
         const world = engineRef.current.world
         Matter.World.clear(world, false)
         itemsRef.current = []
@@ -434,6 +451,7 @@ export const BocalView: React.FC = () => {
         spawnTimeoutsRef.current = []
 
         wallsRef.current = []
+        lastWallConfig.current = null // FORCE UPDATE
         updateWallPositions()
 
         // RE-ADD MOUSE CONSTRAINT
@@ -453,21 +471,25 @@ export const BocalView: React.FC = () => {
 
         // Calculate Jar Center X
         const rect = jarRef.current.getBoundingClientRect()
-        const centerX = rect.left + rect.width / 2
+        // Un-scale coordinates to match physics world
+        const zoom = zoomLevelRef.current
+        const effectiveLeft = (rect.left - window.innerWidth / 2) / zoom + window.innerWidth / 2
+        const effectiveWidth = rect.width / zoom
+        const centerX = effectiveLeft + effectiveWidth / 2
 
         // SHAKE LOGIC: "Slosh" Effect
         // Propel items towards the OPPOSITE side of the jar.
         // If on Left -> Push Right. If on Right -> Push Left.
 
-        // We wake up more items for a better effect (e.g., top 100 or all active)
-        // Limit to top 90 items (approx 3x previous limit of 30) for performance
-        // INCLUDE static items so we wake up the top of the pile even if it's sleeping
-        const activeItems = itemsRef.current
-            .filter(item => item.position.y <= window.innerHeight + 100)
-            .sort((a, b) => a.position.y - b.position.y) // Top first
-            .slice(0, 90)
+        // WAKE UP AND SHAKE ALL ITEMS
+        itemsRef.current.forEach(item => {
+            // Wake up from sleep mode
+            if (item.isStatic || item.isSleeping) {
+                Matter.Sleeping.set(item, false)
+                Matter.Body.setStatic(item, false)
+                item.isFrozen = false
+            }
 
-        activeItems.forEach(item => {
             wakeItem(item)
 
             // Determine direction to center/opposite side
@@ -489,6 +511,10 @@ export const BocalView: React.FC = () => {
     }
 
     const createItem = useCallback((config: ItemConfig, x: number, y: number, isNewMerge = false): MoneyBody => {
+        // Collision categories: walls = 0x0001, items = 0x0002
+        const CATEGORY_WALL = 0x0001
+        const CATEGORY_ITEM = 0x0002
+
         const options: Matter.IChamferableBodyDefinition = {
             restitution: config.type === 'coin' || config.type === 'gem' ? 0.2 : 0.1,
             friction: config.type === 'ingot' ? 0.8 : 0.1,
@@ -498,20 +524,25 @@ export const BocalView: React.FC = () => {
             // Sleeping threshold
             sleepThreshold: 60,
             render: {
-                fillStyle: config.color,
-                strokeStyle: 'transparent', // Disable native border
+                fillStyle: 'transparent', // HIDE native body, we draw textures manually in afterRender
+                strokeStyle: 'transparent',
                 lineWidth: 0
+            },
+            collisionFilter: {
+                category: CATEGORY_ITEM,
+                mask: CATEGORY_WALL | CATEGORY_ITEM // Items collide with walls and other items
             }
         }
 
-        const radius = (config.width * physicsScale) / 2
+        const scale = physicsScaleRef.current || 0.001 // Prevent 0 scale
+        const radius = Math.max(0.1, (config.width * scale) / 2) // Prevent 0 radius
         let body: MoneyBody
 
         if (config.type === 'coin' || config.type === 'gem') {
             body = Matter.Bodies.circle(x, y, radius, options) as MoneyBody
         } else {
-            const height = config.height * physicsScale
-            body = Matter.Bodies.rectangle(x, y, config.width * physicsScale, height, options) as MoneyBody
+            const height = config.height * scale
+            body = Matter.Bodies.rectangle(x, y, config.width * scale, height, options) as MoneyBody
         }
 
         body.denomination = config
@@ -520,7 +551,7 @@ export const BocalView: React.FC = () => {
         body.createdAt = isNewMerge ? Date.now() : 0 // 0 means no anim on load
 
         return body
-    }, [physicsScale])
+    }, [])
 
     // TICK STABILIZATION
     useEffect(() => {
@@ -544,6 +575,11 @@ export const BocalView: React.FC = () => {
             const rect = jarRef.current?.getBoundingClientRect()
             if (!rect) return
 
+            const zoom = zoomLevelRef.current
+            const effectiveLeft = (rect.left - window.innerWidth / 2) / zoom + window.innerWidth / 2
+            const effectiveWidth = rect.width / zoom
+            const effectiveTop = (rect.top - window.innerHeight / 2) / zoom + window.innerHeight / 2
+
             itemsRef.current.forEach(body => {
                 if (body.isStatic) return
 
@@ -554,8 +590,8 @@ export const BocalView: React.FC = () => {
                 // 2. Global Out of Bounds (Fall Protection)
                 // If it falls way below the jar/screen, bring it back to top
                 if (body.position.y > height + 200 || body.position.x < -1000 || body.position.x > width + 1000) {
-                    const spawnX = rect.left + rect.width / 2
-                    Matter.Body.setPosition(body, { x: spawnX, y: rect.top - 50 })
+                    const spawnX = effectiveLeft + effectiveWidth / 2
+                    Matter.Body.setPosition(body, { x: spawnX, y: effectiveTop - 50 })
                     Matter.Body.setVelocity(body, { x: 0, y: 0 })
                     wakeItem(body)
                     return
@@ -572,8 +608,6 @@ export const BocalView: React.FC = () => {
             })
         }
 
-        Matter.Events.on(engine, 'beforeUpdate', stabilization)
-        return () => Matter.Events.off(engine, 'beforeUpdate', stabilization)
         Matter.Events.on(engine, 'beforeUpdate', stabilization)
         return () => Matter.Events.off(engine, 'beforeUpdate', stabilization)
     }, [wakeItem])
@@ -602,7 +636,7 @@ export const BocalView: React.FC = () => {
 
     // MAIN MATTER.JS SETUP (Run once)
     useEffect(() => {
-        if (!sceneRef.current) return
+        if (!sceneRef.current || !engineRef.current) return
 
         const engine = engineRef.current
         const world = engine.world
@@ -610,6 +644,10 @@ export const BocalView: React.FC = () => {
         // FORCE CLEAR on setup to avoid ghost items from HMR or previous state
         Matter.World.clear(world, false)
         itemsRef.current = []
+        wallsRef.current = []
+        lastWallConfig.current = null
+        // Rebuild walls immediately if jar is already mounted (recovers from World.clear wiping callback-created walls)
+        if (jarRef.current) updateWallPositions()
 
         const width = window.innerWidth
         const height = window.innerHeight
@@ -624,8 +662,44 @@ export const BocalView: React.FC = () => {
             }
         })
 
-        // Mouse interaction
+        // Store render reference for zoom updates
+        const renderRef = { current: render }
+
+        // Mouse interaction with ZOOM-AWARE coordinate transformation
         const mouse = Matter.Mouse.create(render.canvas)
+
+        // Override mouse position to account for zoom
+        const originalSetOffset = mouse.offset
+        const updateMouseForZoom = () => {
+            // Transform screen coordinates to physics world coordinates
+            const zoom = zoomLevelRef.current
+            const centerX = window.innerWidth / 2
+            const centerY = window.innerHeight / 2
+
+            // Custom mousemove handler to transform coordinates
+            render.canvas.addEventListener('mousemove', (e) => {
+                // Get raw screen position
+                const rect = render.canvas.getBoundingClientRect()
+                const screenX = e.clientX - rect.left
+                const screenY = e.clientY - rect.top
+
+                // Transform: inverse zoom around center
+                const zoom = zoomLevelRef.current
+                const transformedX = centerX + (screenX - centerX) / zoom
+                const transformedY = centerY + (screenY - centerY) / zoom
+
+                // Update Matter.js mouse position directly
+                mouse.position.x = transformedX
+                mouse.position.y = transformedY
+                mouse.absolute.x = transformedX
+                mouse.absolute.y = transformedY
+            })
+        }
+        updateMouseForZoom()
+
+        // Collision categories: walls = 0x0001, items = 0x0002
+        const CATEGORY_ITEM = 0x0002
+
         const mouseConstraint = Matter.MouseConstraint.create(engine, {
             mouse: mouse,
             constraint: {
@@ -633,6 +707,9 @@ export const BocalView: React.FC = () => {
                 render: {
                     visible: false // Hide the constraint line
                 }
+            },
+            collisionFilter: {
+                mask: CATEGORY_ITEM // Only interact with items, NOT walls
             }
         })
 
@@ -667,12 +744,7 @@ export const BocalView: React.FC = () => {
         window.addEventListener('resize', handleWindowResize)
 
         // JAR RESIZING (Physics Scale)
-        const resizeObserver = new ResizeObserver(() => {
-            updateWallPositions()
-        })
-        if (jarRef.current) {
-            resizeObserver.observe(jarRef.current)
-        }
+        // Handled via "setJarRef" callback now for robustness
 
         const runner = Matter.Runner.create()
         Matter.Runner.run(runner, engine)
@@ -704,6 +776,12 @@ export const BocalView: React.FC = () => {
                 const valB = bodyB.denomination.value
 
                 const directRecipe = MERGE_RECIPES.find(r => r.inputs.length === 2 && r.inputs[0] === valA && r.inputs[1] === valB)
+
+                // CHECK DENOMINATION CAP: Skip merge if any output exceeds max allowed
+                if (directRecipe && directRecipe.outputs.some(v => v > maxDenomValueRef.current)) {
+                    return // Don't merge - output would exceed cap
+                }
+
                 if (directRecipe && !toRemove.includes(bodyA) && !toRemove.includes(bodyB)) {
                     toRemove.push(bodyA, bodyB)
                     directRecipe.outputs.forEach((outVal, idx) => {
@@ -720,6 +798,11 @@ export const BocalView: React.FC = () => {
                 // Limit this check to only run rarely or optimize
                 const tripleRecipes = MERGE_RECIPES.filter(r => r.inputs.length === 3)
                 for (const recipe of tripleRecipes) {
+                    // CHECK DENOMINATION CAP: Skip if any output exceeds max allowed
+                    if (recipe.outputs.some(v => v > maxDenomValueRef.current)) {
+                        continue // Don't process this recipe - output would exceed cap
+                    }
+
                     const needed = [...recipe.inputs]
                     const idxA = needed.indexOf(valA)
                     if (idxA > -1) needed.splice(idxA, 1)
@@ -802,10 +885,20 @@ export const BocalView: React.FC = () => {
 
         Matter.Events.on(engine, 'collisionStart', handleCollision)
 
-        // DRAW LABELS ON ITEMS
+        // DRAW LABELS ON ITEMS with ZOOM
         Matter.Events.on(render, 'afterRender', () => {
             const context = render.context
             if (!context) return
+
+            const zoom = zoomLevelRef.current
+            const centerX = window.innerWidth / 2
+            const centerY = window.innerHeight / 2
+
+            // Apply zoom transformation to the canvas
+            context.save()
+            context.translate(centerX, centerY)
+            context.scale(zoom, zoom)
+            context.translate(-centerX, -centerY)
 
             itemsRef.current.forEach(item => {
                 const { position, angle, denomination } = item
@@ -976,11 +1069,14 @@ export const BocalView: React.FC = () => {
 
                 context.restore()
             }
+
+            // Restore the zoom transformation
+            context.restore()
         })
 
         return () => {
             window.removeEventListener('resize', handleWindowResize)
-            resizeObserver.disconnect()
+            // jarObserverRef is handled in its own callback ref
             Matter.Events.off(engine, 'collisionStart', handleCollision)
             Matter.Render.stop(render)
             Matter.Runner.stop(runner)
@@ -1015,10 +1111,16 @@ export const BocalView: React.FC = () => {
             spawnTimeoutsRef.current.forEach(clearTimeout)
             spawnTimeoutsRef.current = []
 
+            if (!engineRef.current) return
             const world = engineRef.current.world
             const rect = jarRef.current.getBoundingClientRect()
-            const neckW = rect.width * (170 / 450)
-            const centerX = rect.left + rect.width / 2
+
+            const zoom = zoomLevelRef.current
+            const effectiveWidth = rect.width / zoom
+            const effectiveLeft = (rect.left - window.innerWidth / 2) / zoom + window.innerWidth / 2
+
+            const neckW = effectiveWidth * (170 / 450)
+            const centerX = effectiveLeft + effectiveWidth / 2
 
             let remainingGap = gap
             const toSpawn: ItemConfig[] = []
@@ -1033,7 +1135,11 @@ export const BocalView: React.FC = () => {
                 // STRATEGY: OPTIMIZED (First Load / Catch Up)
                 // Fill the jar efficiently with largest denominations
                 spawnDelay = 150 // Moderate speed for initial load (not too fast, not too slow)
-                for (const config of DENOMINATIONS) {
+
+                // Filter denominations by max allowed
+                const allowedConfigs = DENOMINATIONS.filter(d => d.value <= maxDenomValueRef.current)
+
+                for (const config of allowedConfigs) {
                     const count = Math.floor(parseFloat((remainingGap / config.value).toFixed(4)))
                     if (count > 0) {
                         const actualToSpawn = Math.min(count, 30) // Batch limit
@@ -1049,20 +1155,29 @@ export const BocalView: React.FC = () => {
                 // If the gap is huge, don't just use pennies!
                 // Dynamically enable larger denominations based on remaining amount.
 
+                // ALL denominations from high to low (always include smallest coins)
                 let allowedDenoms: number[] = []
 
                 if (remainingGap > 500) {
-                    // Huge gap: Allow everything up to 50€
-                    allowedDenoms = [50, 20, 10, 5, 2, 1, 0.50, 0.20, 0.10]
+                    // Huge gap: Allow everything up to 50€ + all small coins
+                    allowedDenoms = [50, 20, 10, 5, 2, 1, 0.50, 0.20, 0.10, 0.05, 0.02, 0.01]
                 } else if (remainingGap > 100) {
-                    // Big gap: Allow bills up to 10€
-                    allowedDenoms = [10, 5, 2, 1, 0.50, 0.20, 0.10]
+                    // Big gap: Allow bills up to 10€ + all small coins
+                    allowedDenoms = [10, 5, 2, 1, 0.50, 0.20, 0.10, 0.05, 0.02, 0.01]
                 } else if (remainingGap > 20) {
-                    // Moderate gap: Allow coins up to 2€
-                    allowedDenoms = [2, 1, 0.50, 0.20, 0.10, 0.05]
+                    // Moderate gap: Allow coins up to 2€ + all small coins
+                    allowedDenoms = [2, 1, 0.50, 0.20, 0.10, 0.05, 0.02, 0.01]
                 } else {
                     // Small gap: The classic "Penny Rain"
                     allowedDenoms = [0.20, 0.10, 0.05, 0.02, 0.01]
+                }
+
+                // Filter by max denomination cap
+                allowedDenoms = allowedDenoms.filter(v => v <= maxDenomValueRef.current)
+
+                // FALLBACK: If filter removed everything, use smallest available denomination
+                if (allowedDenoms.length === 0) {
+                    allowedDenoms = [maxDenomValueRef.current]
                 }
 
                 // Calculate dynamic delay based on remaining gap
@@ -1117,78 +1232,185 @@ export const BocalView: React.FC = () => {
         }
     }, [createItem, physicsScale, resetTrigger])
 
+    // CALLBACK REF REFACTOR
+    const setJarRef = useCallback((node: HTMLDivElement | null) => {
+        (jarRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+
+        // CLEANUP: Disconnect previous observer if exists
+        if (jarObserverRef.current) {
+            jarObserverRef.current.disconnect()
+            jarObserverRef.current = null
+        }
+
+        if (node) {
+            console.log("LOG: Jar Node Mounted. Initializing Walls via Callback Ref.")
+            const resizeObserver = new ResizeObserver(() => updateWallPositions())
+            resizeObserver.observe(node)
+            jarObserverRef.current = resizeObserver
+
+            // Retry logic
+            const ensureWallsCreated = (retries = 20) => {
+                requestAnimationFrame(() => {
+                    // Verify node is still current
+                    if (jarRef.current !== node) return
+
+                    // Force update
+                    if (wallsRef.current.length === 0) lastWallConfig.current = null
+                    updateWallPositions()
+
+                    if (wallsRef.current.length === 0 && retries > 0) {
+                        setTimeout(() => ensureWallsCreated(retries - 1), 100)
+                    }
+                })
+            }
+            ensureWallsCreated()
+        }
+    }, [updateWallPositions])
+
     return (
-        <div className={`fixed inset-0 flex flex-col items-center justify-center p-8 z-50 overflow-hidden transition-colors duration-1000 ${isDay ? 'bg-sky-900' : 'bg-slate-950'} pointer-events-none`}>
-            {/* Immersive Background - Static */}
+        <div
+            className={`fixed inset-0 flex flex-col items-center justify-center p-8 z-50 overflow-hidden transition-colors duration-1000 ${isDay ? 'bg-sky-900' : 'bg-slate-950'} pointer-events-none`}
+            style={{ backgroundColor: isDay ? '#0c4a6e' : '#020617' }} // Fallback solid color to prevent transparency
+            onWheel={handleWheel}
+        >
+
+            {/* ZOOM CONTAINER - Background and decorations ONLY (not physics canvas) */}
             <div
-                className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-100"
-                style={{ backgroundImage: `url(${imgBocalEnv})` }}
-            />
-            <div className="absolute inset-0 bg-black/30 pointer-events-none" /> {/* Dimmer */}
+                className="absolute inset-0 w-full h-full flex flex-col items-center justify-center"
+                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center center' }}
+            >
+                {/* Immersive Background - Static */}
+                <div
+                    className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-100"
+                    style={{ backgroundImage: `url(${imgBocalEnv})` }}
+                />
+                <div className="absolute inset-0 bg-black/30 pointer-events-none" /> {/* Dimmer */}
 
-            {/* Weather Layer - Static (Atmosphere) */}
-            <WeatherLayer />
+                {/* Weather Layer - Static (Atmosphere) */}
+                <WeatherLayer />
 
-            {/* Shaking Content Wrapper (Jar + UI + Physics) */}
-            <div className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center ${isShaking ? 'camera-shake' : ''}`}>
-
-                {/* Full screen physics canvas - MUST HAVE pointer-events-auto */}
-                <div ref={sceneRef} className="absolute inset-0 w-full h-full pointer-events-auto outline-none focus:outline-none ring-0" />
-
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.1)_0%,transparent_75%)] pointer-events-none" />
-
-                {/* FPS Counter (Debug) */}
-                <div className="absolute top-4 left-4 z-50 pointer-events-auto">
-                    <FpsCounter />
+                {/* Jar Decoration - Zoomed with background, z-35 to be above canvas (z-25) */}
+                <div className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center z-[35] ${isShaking ? 'camera-shake' : ''}`}>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.1)_0%,transparent_75%)] pointer-events-none" />
+                    <JarDecoration jarRef={setJarRef} />
+                    <ScoreDisplay />
                 </div>
+            </div>
 
-                <div className="absolute top-8 left-8 flex flex-col gap-4 z-[100] pointer-events-auto">
-                    <button
-                        onClick={() => setViewMode('setup')}
-                        className="flex items-center gap-3 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all border border-white/10 no-drag shadow-2xl backdrop-blur-md pointer-events-auto"
-                    >
-                        <ArrowLeft size={20} /> Retour au Hub
-                    </button>
+            {/* PHYSICS CANVAS - OUTSIDE zoom container, handles its own zoom via context transform */}
+            <div
+                ref={sceneRef}
+                className={`absolute inset-0 w-full h-full pointer-events-auto outline-none focus:outline-none ring-0 ${isShaking ? 'camera-shake' : ''}`}
+                style={{ zIndex: 25 }} // Above background, below UI
+            />
 
-                    <button
-                        onClick={handleShake}
-                        className="flex items-center gap-3 px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-white transition-all border border-white/20 no-drag shadow-2xl font-bold uppercase tracking-wider group pointer-events-auto"
-                    >
-                        <RefreshCw size={22} className={`group-hover:rotate-180 transition-transform duration-500 ${isShaking ? 'animate-spin' : ''}`} />
-                        Secouer la Jarre
-                    </button>
+            {/* FIXED UI LAYER (Not Zoomed) */}
 
-                    <button
-                        onClick={handleResetJar}
-                        className="flex items-center gap-3 px-6 py-3 bg-orange-500/10 hover:bg-orange-500/20 rounded-2xl text-orange-400 transition-all border border-orange-500/20 no-drag backdrop-blur-md opacity-60 hover:opacity-100"
-                    >
-                        Reset le bocal
-                    </button>
+            {/* FPS Counter (Debug) */}
+            <div className="absolute top-4 left-4 z-50 pointer-events-auto">
+                <FpsCounter />
+            </div>
 
-                    <div className="mt-4 border-t border-white/10 pt-4 space-y-4">
-                        <div className="flex bg-black/40 p-1 rounded-xl backdrop-blur-xl border border-white/10 w-full">
-                            <button
-                                onClick={() => useSalaryStore.getState().setBocalMode('daily')}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${useSalaryStore(s => s.bocalMode) === 'daily' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                Jour
-                            </button>
-                            <button
-                                onClick={() => useSalaryStore.getState().setBocalMode('monthly')}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${useSalaryStore(s => s.bocalMode) === 'monthly' ? 'bg-indigo-500/20 text-indigo-300 shadow-sm border border-indigo-500/30' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                Mois
-                            </button>
-                        </div>
+            <div className="absolute top-8 left-8 flex flex-col gap-4 z-[100] pointer-events-auto">
+                <button
+                    onClick={() => setViewMode('setup')}
+                    className="flex items-center gap-3 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all border border-white/10 no-drag shadow-2xl backdrop-blur-md pointer-events-auto w-full"
+                >
+                    <ArrowLeft size={20} /> Retour
+                </button>
 
-                        {/* Weather Controls removed per request */}
-                        <RadioControls />
+                <button
+                    onClick={handleShake}
+                    className="flex items-center gap-3 px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-white transition-all border border-white/20 no-drag shadow-2xl font-bold uppercase tracking-wider group pointer-events-auto w-full justify-center"
+                >
+                    <RefreshCw size={22} className={`group-hover:rotate-180 transition-transform duration-500 ${isShaking ? 'animate-spin' : ''}`} />
+                    Secouer
+                </button>
+
+                <button
+                    onClick={handleResetJar}
+                    className="flex items-center gap-3 px-6 py-3 bg-orange-500/10 hover:bg-orange-500/20 rounded-2xl text-orange-400 transition-all border border-orange-500/20 no-drag backdrop-blur-md opacity-60 hover:opacity-100 w-full justify-center"
+                >
+                    Reset
+                </button>
+
+                {/* ZOOM SLIDER NEW */}
+                <div className="flex flex-col gap-2 p-4 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 w-full">
+                    <div className="flex items-center justify-between text-white text-outline text-xs font-bold uppercase tracking-wider mb-2">
+                        <span>Zoom</span>
+                        <span className="text-white text-outline">{Math.round(zoomLevel * 100)}%</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <ZoomOut size={14} className="text-slate-400" />
+                        <Slider
+                            min={1}
+                            max={1.4}
+                            step={0.1}
+                            value={zoomLevel}
+                            onChange={(val) => typeof val === 'number' && setZoomLevel(val)}
+                            trackStyle={{ backgroundColor: '#818cf8', height: 4 }}
+                            handleStyle={{
+                                border: '2px solid #818cf8',
+                                backgroundColor: '#1e1b4b',
+                                opacity: 1,
+                                width: 14,
+                                height: 14,
+                                marginTop: -5
+                            }}
+                            railStyle={{ backgroundColor: 'rgba(255,255,255,0.1)', height: 4 }}
+                        />
+                        <ZoomIn size={14} className="text-slate-400" />
                     </div>
                 </div>
 
-                <JarDecoration jarRef={jarRef} />
-                <ScoreDisplay />
+                {/* DENOMINATION CAP SLIDER */}
+                <div className="flex flex-col gap-2 p-4 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 w-full">
+                    <div className="flex items-center justify-between text-white text-outline text-xs font-bold uppercase tracking-wider mb-2">
+                        <span>Plus gros billet</span>
+                        <span className="text-white text-outline">{getDenominationLabel(DENOMINATIONS_SORTED[maxDenomIndex].value)}</span>
+                    </div>
+                    <Slider
+                        min={0}
+                        max={DENOMINATIONS_SORTED.length - 1}
+                        step={1}
+                        value={maxDenomIndex}
+                        onChange={(val) => typeof val === 'number' && setMaxDenomIndex(val)}
+                        trackStyle={{ backgroundColor: '#f59e0b', height: 4 }}
+                        handleStyle={{
+                            border: '2px solid #f59e0b',
+                            backgroundColor: '#1e1b4b',
+                            opacity: 1,
+                            width: 14,
+                            height: 14,
+                            marginTop: -5
+                        }}
+                        railStyle={{ backgroundColor: 'rgba(255,255,255,0.1)', height: 4 }}
+                    />
+                    <div className="flex justify-between text-[9px] text-white text-outline mt-1">
+                        <span>1c</span>
+                        <span>💎</span>
+                    </div>
+                </div>
+                <div className="mt-4 border-t border-white/10 pt-4 space-y-4">
+                    <div className="flex bg-black/40 p-1 rounded-xl backdrop-blur-xl border border-white/10 w-full">
+                        <button
+                            onClick={() => useSalaryStore.getState().setBocalMode('daily')}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase text-outline tracking-wider transition-all ${useSalaryStore(s => s.bocalMode) === 'daily' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-300 hover:text-white'}`}
+                        >
+                            Jour
+                        </button>
+                        <button
+                            onClick={() => useSalaryStore.getState().setBocalMode('monthly')}
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase text-outline tracking-wider transition-all ${useSalaryStore(s => s.bocalMode) === 'monthly' ? 'bg-indigo-500/20 text-white shadow-sm border border-indigo-500/30' : 'text-slate-300 hover:text-white'}`}
+                        >
+                            Mois
+                        </button>
+                    </div>
+
+                    <BureauControls orientation="vertical" showWeather={false} />
+                </div>
             </div>
         </div>
     )
 }
+

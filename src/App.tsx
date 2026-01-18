@@ -3,10 +3,11 @@ import { WageInput } from './components/WageInput'
 import { MoneyWidget } from './components/MoneyWidget'
 import { BocalView } from './components/BocalView'
 import { RadioPlayer } from './components/RadioPlayer'
+import { WeatherLayer } from './components/WeatherLayer' // Added global import
 import { HubView } from './components/hub/HubView' // New Import
 
 import { useWeatherStore } from './store/weatherStore'
-import { CloudRain, CloudSnow, Sun, Moon } from 'lucide-react'
+import { Minimize2 } from 'lucide-react'
 
 function App() {
     const viewMode = useSalaryStore(s => s.viewMode)
@@ -31,36 +32,27 @@ function App() {
     }
 
     return (
-        <>
-            <RadioPlayer />
+        <div className="relative w-full h-full overflow-hidden">
+            {/* Main App Background / Container */}
 
-            {/* Weather Debug Controls (Always visible for now) */}
-            <div className="fixed top-4 left-4 z-[100] flex gap-2 no-drag group opacity-0 hover:opacity-100 transition-opacity">
+            <RadioPlayer />
+            {viewMode !== 'widget' && <WeatherLayer />} {/* Global Weather Overlay */}
+
+
+
+            {/* Reduce Button (Visible everywhere EXCEPT Widget) */}
+            {viewMode !== 'widget' && (
                 <button
-                    onClick={toggleDayNight}
-                    className="p-2 bg-black/50 rounded-full hover:bg-black/80 text-white"
-                    title="Toggle Day/Night"
+                    onClick={() => setViewMode('widget')}
+                    className="absolute bottom-4 right-4 z-[100] flex items-center gap-2 px-4 py-2 bg-black/40 hover:bg-black/60 text-white/70 hover:text-white rounded-xl backdrop-blur-md border border-white/10 transition-all shadow-lg group no-drag pointer-events-auto"
                 >
-                    {isDay ? <Sun size={16} /> : <Moon size={16} />}
+                    <span className="text-xs font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0 duration-300">Réduire</span>
+                    <Minimize2 size={18} />
                 </button>
-                <button
-                    onClick={() => setWeather(condition === 'rain' ? 'clear' : 'rain')}
-                    className={`p-2 rounded-full hover:bg-black/80 text-white ${condition === 'rain' ? 'bg-blue-500' : 'bg-black/50'}`}
-                    title="Toggle Rain"
-                >
-                    <CloudRain size={16} />
-                </button>
-                <button
-                    onClick={() => setWeather(condition === 'snow' ? 'clear' : 'snow')}
-                    className={`p-2 rounded-full hover:bg-black/80 text-white ${condition === 'snow' ? 'bg-white/50' : 'bg-black/50'}`}
-                    title="Toggle Snow"
-                >
-                    <CloudSnow size={16} />
-                </button>
-            </div>
+            )}
 
             {content}
-        </>
+        </div>
     )
 }
 

@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
-    "publish": "npm run build && electron-builder --publish always"
+    "publish": "npm run build && electron-builder --publish always",
+    "build:win": "npm run build && electron-builder --win"
   },
   "build": {
     "appId": "com.victorgrabowski.moneymaker",
@@ -22,7 +23,10 @@
       "package.json"
     ],
     "win": {
-      "target": "portable"
+      "target": [
+        "nsis",
+        "portable"
+      ]
     },
     "publish": {
       "provider": "github",

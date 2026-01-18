@@ -30,12 +30,12 @@ export const FpsCounter = () => {
         <div className={`
             fixed top-4 right-4 z-[9999] 
             px-3 py-1.5 rounded-lg 
-            font-mono text-xs font-bold 
+            font-mono text-xs font-bold text-outline
             backdrop-blur-md border border-white/10 shadow-lg
             transition-colors duration-500
-            ${fps < 30 ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                fps < 50 ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
-                    'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'}
+            ${fps < 30 ? 'bg-red-500/20 text-red-100 border-red-500/30' :
+                fps < 50 ? 'bg-yellow-500/20 text-yellow-100 border-yellow-500/30' :
+                    'bg-emerald-500/20 text-emerald-100 border-emerald-500/30'}
         `}>
             {fps} FPS
         </div>

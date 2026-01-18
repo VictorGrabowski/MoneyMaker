@@ -35,24 +35,28 @@ function createWindow() {
             contextIsolation: true,
             backgroundThrottling: false // Keep running in background (vital for radio)
         },
-        width: mainBounds.width || 800,
-        height: mainBounds.height || 600,
+        width: 1920,
+        height: 1080,
         x: mainBounds.x,
         y: mainBounds.y,
+        useContentSize: true, // Ensure web content is 1920x1080
+        resizable: true, // Allow resizing but start at 1920x1080
         frame: false,
         transparent: true,
         backgroundColor: '#00000000',
         show: false // Don't show immediately
     })
 
-    if (mainBounds.maximized) {
-        win.maximize()
-    }
+    // Constraint: Always start 1920x1080 logic overrides stored maximization for now
+    // if (mainBounds.maximized) {
+    //    win.maximize()
+    // }
+    win.center() // Ensure centered on start
 
     win.show()
 
     // Open DevTools automatically for debugging
-    win.webContents.openDevTools()
+    // win.webContents.openDevTools()
 
     if (process.env.VITE_DEV_SERVER_URL) {
         console.log('Loading URL:', process.env.VITE_DEV_SERVER_URL)
@@ -77,37 +81,32 @@ function createWindow() {
             }
 
             // Setup Widget
-            const widgetPos = store.get('windowBounds.widget')
-            console.log('Switching to Widget Mode. Stored Pos:', widgetPos)
+            // Setup Widget
+            // FORCE BOTTOM RIGHT: Ignore stored position as per user request
+            console.log('Switching to Widget Mode. Forcing Bottom-Right.')
 
             win.setMinimumSize(250, 100)
             win.setResizable(false)
             win.setAlwaysOnTop(true)
 
-            // Check if position is valid (not 0,0)
-            if (widgetPos && (widgetPos.x !== 0 || widgetPos.y !== 0)) {
-                console.log('Restoring stored widget position:', widgetPos)
-                win.setBounds({ x: widgetPos.x, y: widgetPos.y, width: 250, height: 100 })
-            } else {
-                // Default to Bottom-Right
-                console.log('No valid stored position (or 0,0). Calculating default bottom-right.')
-                const calculatePos = () => {
-                    const primaryDisplay = screen.getPrimaryDisplay()
-                    const { width, height } = primaryDisplay.workAreaSize
-                    const x = width - 250 - 20
-                    const y = height - 100 - 20
-                    console.log(`Screen: ${width}x${height}, Target: ${x},${y}`)
-                    return { x, y }
-                }
-
-                try {
-                    const { x, y } = calculatePos()
-                    win.setPosition(x, y)
-                } catch (err) {
-                    console.error('Error calculating screen position:', err)
-                    win.center() // Fallback
-                }
+            // Always calculate bottom-right
+            const calculatePos = () => {
+                const primaryDisplay = screen.getPrimaryDisplay()
+                const { width, height } = primaryDisplay.workAreaSize
+                const x = width - 250 - 20
+                const y = height - 100 - 20
+                console.log(`Screen: ${width}x${height}, Target: ${x},${y}`)
+                return { x, y }
             }
+
+            try {
+                const { x, y } = calculatePos()
+                win.setPosition(x, y)
+            } catch (err) {
+                console.error('Error calculating screen position:', err)
+                win.center() // Fallback
+            }
+
             win.setSize(250, 100) // Force size
 
         } else {
@@ -115,22 +114,13 @@ function createWindow() {
             store.set('windowBounds.widget', { x: currentBounds.x, y: currentBounds.y })
 
             // Setup Main
-            win.setMinimumSize(400, 600)
+            win.setMinimumSize(1920, 1080) // Enforce min size
             win.setResizable(true)
             win.setAlwaysOnTop(false)
 
-            const savedMain = store.get('windowBounds.main')
-            if (savedMain.maximized) {
-                win.maximize()
-            } else {
-                win.setBounds({
-                    x: savedMain.x || 0,
-                    y: savedMain.y || 0,
-                    width: savedMain.width || 800,
-                    height: savedMain.height || 600
-                })
-                win.center()
-            }
+            // Force 1920x1080 and Center
+            win.setSize(1920, 1080)
+            win.center()
         }
     })
 

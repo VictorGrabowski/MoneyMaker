@@ -31,8 +31,18 @@ export const KitchenView: React.FC = () => {
 
                 {/* Visual Title (Subtle) */}
                 <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                    <h2 className="text-4xl font-extralight tracking-[0.3em] uppercase opacity-40 mb-2">La Cuisine</h2>
+                    <h2 className="text-4xl font-extralight tracking-[0.3em] uppercase opacity-40 mb-2 text-white text-outline">La Cuisine</h2>
                     <div className="h-px w-24 bg-white/20 mx-auto" />
+                </div>
+
+                {/* ... */}
+
+                {/* Status Message */}
+                <div className="mt-20 flex flex-col items-center gap-4">
+                    <div className="h-px w-12 bg-white/10" />
+                    <div className="opacity-60 text-[10px] tracking-[0.4em] uppercase font-bold text-white text-outline">
+                        Le repaire secret de Chips
+                    </div>
                 </div>
 
                 <div className="relative w-full h-full">
