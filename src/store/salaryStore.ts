@@ -10,10 +10,15 @@ interface SalaryState {
     viewMode: 'setup' | 'widget' | 'bocal'
     bocalMode: 'daily' | 'monthly'
     hasInitializedBocal: boolean
+    workingDays: number[] // 0=Sun, 1=Mon, ..., 6=Sat
+    workStartHour: number // 0-23
+    workEndHour: number // 0-24
     setMonthlyNet: (net: number) => void
     setViewMode: (mode: 'setup' | 'widget' | 'bocal') => void
     setBocalMode: (mode: 'daily' | 'monthly') => void
     setHasInitializedBocal: (initialized: boolean) => void
+    setWorkingDays: (days: number[]) => void
+    setWorkHours: (start: number, end: number) => void
     tick: (ms: number) => void
     loadSalaryData: () => Promise<void>
 }
@@ -32,30 +37,40 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
     viewMode: 'setup',
     bocalMode: 'daily',
     hasInitializedBocal: false,
+    workingDays: [1, 2, 3, 4, 5], // Default Mon-Fri
+    workStartHour: 9,
+    workEndHour: 17,
     setMonthlyNet: (net: number) => {
         const hourlyRate = net / HOURS_PER_MONTH_39H
+        const { workStartHour, workEndHour, workingDays } = get()
 
-        // Calculate earnings since 9 AM today, capped at 17 PM
+        // Calculate earnings since Start Hour today, capped at End Hour
         const now = new Date()
-        const today9AM = new Date(now)
-        today9AM.setHours(9, 0, 0, 0)
+        const currentDay = now.getDay()
+        let earnedSinceStart = 0
 
-        const today5PM = new Date(now)
-        today5PM.setHours(17, 0, 0, 0)
+        if (workingDays.includes(currentDay)) {
+            const todayStart = new Date(now)
+            todayStart.setHours(workStartHour, 0, 0, 0)
 
-        // If now is past 17h, we cap the calculation time at 17h
-        const calcTime = now > today5PM ? today5PM : now
+            const todayEnd = new Date(now)
+            todayEnd.setHours(workEndHour, 0, 0, 0)
 
-        const msSince9AM = Math.max(0, calcTime.getTime() - today9AM.getTime())
-        const earnedSince9AM = (hourlyRate / (60 * 60 * 1000)) * msSince9AM
+            // If now is past End Hour, we cap the calculation time at End Hour
+            const calcTime = now > todayEnd ? todayEnd : now
+
+            // If now is before Start Hour, calcTime < todayStart -> msSinceStart = 0
+            const msSinceStart = Math.max(0, calcTime.getTime() - todayStart.getTime())
+            earnedSinceStart = (hourlyRate / (60 * 60 * 1000)) * msSinceStart
+        }
 
         set({
             monthlyNet: net,
             wage: hourlyRate,
-            accumulated: earnedSince9AM,
-            dailyAccumulated: earnedSince9AM, // Initialize daily
+            accumulated: earnedSinceStart,
+            dailyAccumulated: earnedSinceStart, // Initialize daily
             displayedAccumulated: 0,
-            isCatchingUp: earnedSince9AM > 0,
+            isCatchingUp: earnedSinceStart > 0,
             hasInitializedBocal: false
         })
 
@@ -75,8 +90,10 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
     setHasInitializedBocal: (initialized) => {
         set({ hasInitializedBocal: initialized })
     },
+    setWorkingDays: (days) => set({ workingDays: days }),
+    setWorkHours: (start, end) => set({ workStartHour: start, workEndHour: end }),
     tick: (ms) => {
-        const { wage, dailyAccumulated, displayedAccumulated, isCatchingUp, bocalMode } = get()
+        const { wage, dailyAccumulated, displayedAccumulated, isCatchingUp, bocalMode, workingDays, workStartHour, workEndHour } = get()
         if (wage <= 0) return
 
         // 1. Update real accumulated
@@ -85,14 +102,21 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
         const now = new Date()
         const currentHour = now.getHours()
         const currentDayOfWeek = now.getDay() // 0 = Sun, 6 = Sat
+
         let nextDailyAccumulated = dailyAccumulated
 
-        // Only accumulate between 9h and 17h AND only on weekdays (Mon-Fri)
-        if (currentHour >= 9 && currentHour < 17 && currentDayOfWeek !== 0 && currentDayOfWeek !== 6) {
+        // Accumulate only during working hours on working days
+        // Note: Simple check currentHour >= start && currentHour < end handles standard hours.
+        // For partial minutes, the tick ms simply adds up.
+        // Boundary case: if currentHour changes from 16 to 17 (end), we stop.
+        const isWorkingTime = currentHour >= workStartHour && currentHour < workEndHour
+        const isWorkingDay = workingDays.includes(currentDayOfWeek)
+
+        if (isWorkingTime && isWorkingDay) {
             nextDailyAccumulated = dailyAccumulated + (earnedPerMs * ms)
         }
 
-        // Calculate Monthly Total (Excluding Weekends)
+        // Calculate Monthly Total (Excluding non-working days)
         const currentDayOfMonth = now.getDate()
         let workingDaysPrior = 0
 
@@ -100,13 +124,14 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
         for (let d = 1; d < currentDayOfMonth; d++) {
             const dateToCheck = new Date(now.getFullYear(), now.getMonth(), d)
             const dayOfWeek = dateToCheck.getDay()
-            // If Mon(1) to Fri(5), it counts
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+
+            if (workingDays.includes(dayOfWeek)) {
                 workingDaysPrior++
             }
         }
 
-        const hoursPrior = workingDaysPrior * 8 // 8h per working day
+        const dailyHours = workEndHour - workStartHour
+        const hoursPrior = workingDaysPrior * dailyHours
         const monthlyBaseline = hoursPrior * wage
 
         const nextMonthlyAccumulated = monthlyBaseline + nextDailyAccumulated
@@ -151,25 +176,38 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
         const wage = await window.electron.getWage()
         const net = wage * HOURS_PER_MONTH_39H
 
+        /* 
+           We can't easily access the store state here via `get()` in the create callback 
+           without casting, but we can assume defaults or use set state if we split logic.
+           However, simplest is to re-read state inside the component or just assume defaults
+           for initial load, OR better: use `get()` which IS available.
+           Wait, `loadSalaryData` is defined in `create((set, get) => ...)` so `get` IS available.
+        */
+        const { workStartHour, workEndHour, workingDays } = get()
+
         const now = new Date()
-        const today9AM = new Date(now)
-        today9AM.setHours(9, 0, 0, 0)
+        const currentDay = now.getDay()
+        let earnedSinceStart = 0
 
-        const today5PM = new Date(now)
-        today5PM.setHours(17, 0, 0, 0)
+        if (workingDays.includes(currentDay)) {
+            const todayStart = new Date(now)
+            todayStart.setHours(workStartHour, 0, 0, 0)
 
-        const calcTime = now > today5PM ? today5PM : now
+            const todayEnd = new Date(now)
+            todayEnd.setHours(workEndHour, 0, 0, 0)
 
-        const msSince9AM = Math.max(0, calcTime.getTime() - today9AM.getTime())
-        const earnedSince9AM = (wage / (60 * 60 * 1000)) * msSince9AM
+            const calcTime = now > todayEnd ? todayEnd : now
+            const msSinceStart = Math.max(0, calcTime.getTime() - todayStart.getTime())
+            earnedSinceStart = (wage / (60 * 60 * 1000)) * msSinceStart
+        }
 
         set({
             wage,
             monthlyNet: net,
-            accumulated: earnedSince9AM,
-            dailyAccumulated: earnedSince9AM,
+            accumulated: earnedSinceStart,
+            dailyAccumulated: earnedSinceStart,
             displayedAccumulated: 0,
-            isCatchingUp: earnedSince9AM > 0,
+            isCatchingUp: earnedSinceStart > 0,
             hasInitializedBocal: false
         })
     }

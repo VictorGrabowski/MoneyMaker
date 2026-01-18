@@ -33,6 +33,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
+            backgroundThrottling: false // Keep running in background (vital for radio)
         },
         width: mainBounds.width || 800,
         height: mainBounds.height || 600,

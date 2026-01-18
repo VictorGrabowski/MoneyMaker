@@ -9,7 +9,6 @@ export interface RadioStation {
 }
 
 export const RADIO_STATIONS: RadioStation[] = [
-    { name: 'Lofi Girl', url: 'jfKfPfyJRdk', style: 'Focus / Relax', type: 'youtube' },
     { name: 'Radio Nova', url: 'https://novazz.ice.infomaniak.ch/novazz-128.mp3', style: 'Eclectic', type: 'stream' },
     { name: 'FIP', url: 'https://icecast.radiofrance.fr/fip-midfi.mp3', style: 'Jazz / Groove', type: 'stream' },
     { name: 'France Info', url: 'https://icecast.radiofrance.fr/franceinfo-midfi.mp3', style: 'News', type: 'stream' }
@@ -28,7 +27,7 @@ interface ImmersionState {
 export const useImmersionStore = create<ImmersionState>((set) => ({
     isRadioOn: false,
     currentStationIndex: 0,
-    volume: 0.5,
+    volume: 0.25,
     toggleRadio: () => set((state) => ({ isRadioOn: !state.isRadioOn })),
     nextStation: () => set((state) => ({
         currentStationIndex: (state.currentStationIndex + 1) % RADIO_STATIONS.length
