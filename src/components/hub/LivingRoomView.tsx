@@ -4,9 +4,9 @@ import imgDayEmpty from '../../assets/hub/salon_day.png'
 import imgNight from '../../assets/hub/salon_night.png'
 import { useWeatherStore } from '../../store/weatherStore'
 import { useSalaryStore } from '../../store/salaryStore'
-import { useCookingStore } from '../../store/cookingStore'
-import { GrimoireView } from '../cooking/GrimoireView'
-import { PrepStation } from '../cooking/PrepStation'
+import { useBakingStore } from '../../store/bakingStore'
+import RecipeBook from '../RecipeBook'
+import BakingView from '../BakingView'
 import { Coffee, Cat } from 'lucide-react'
 
 // Sub-component for Baking Timer overlay
@@ -54,10 +54,10 @@ const OvenTimer = () => {
 export const LivingRoomView: React.FC = () => {
     const { isDay } = useWeatherStore()
     const setViewMode = useSalaryStore(s => s.setViewMode)
-    const { status, finishCooking, hasFinishedStock } = useCookingStore()
+    const { isBaking, timeRemaining } = useBakingStore()
 
     // Local state for modals
-    const [showGrimoire, setShowGrimoire] = useState(false)
+    const [showRecipeBook, setShowRecipeBook] = useState(false)
     const [isCoffeeMachineOn, setIsCoffeeMachineOn] = useState(false)
     const [showChipsTooltip, setShowChipsTooltip] = useState(false)
 
@@ -65,23 +65,15 @@ export const LivingRoomView: React.FC = () => {
     const imgChipsDay = new URL('../../assets/hub/chips_sleeping_day.png', import.meta.url).href
     const imgChipsNight = new URL('../../assets/hub/chips_sleeping_night.png', import.meta.url).href
 
-    // Only show pastries background if we have finished a session and collected the reward
-    const backgroundImage = isDay
-        ? (hasFinishedStock ? imgDayWithPastry : imgDayEmpty)
-        : imgNight
+    // Determine background
+    // TODO: Connect "hasFinishedStock" to bakingStore logic if needed for reward visuals
+    const backgroundImage = isDay ? imgDayEmpty : imgNight
 
     const handleOvenClick = () => {
-        if (showGrimoire || status !== 'idle' && status !== 'done') return // Prevent click through
-
-        if (status === 'idle') {
-            setShowGrimoire(true)
-        } else if (status === 'done') {
-            finishCooking()
+        if (!isBaking) {
+            setShowRecipeBook(true)
         }
     }
-
-    const isModalOpen = showGrimoire || status === 'prep'
-
 
     return (
         <div className="absolute inset-0 w-full h-full overflow-hidden">
@@ -102,38 +94,28 @@ export const LivingRoomView: React.FC = () => {
                 {/* "Four" (Oven) Interaction Zone */}
                 <div
                     className={`absolute bottom-[5%] right-[2%] w-[25%] h-[35%] cursor-pointer rounded-lg z-20 group outline-none focus:ring-0
-                        ${isModalOpen ? 'pointer-events-none opacity-0' : 'transition-colors duration-300 opacity-100'}
-                        ${status === 'idle' ? 'hover:bg-yellow-400/5 bg-transparent' : ''}
-                        ${status === 'baking' ? 'hover:bg-orange-500/10 bg-transparent' : ''}
-                        ${status === 'done' ? 'bg-green-400/10 shadow-[0_0_50px_rgba(74,222,128,0.4)] animate-pulse' : ''}
+                        ${showRecipeBook || isBaking ? 'pointer-events-none opacity-0' : 'transition-colors duration-300 opacity-100'}
+                        hover:bg-yellow-400/5 bg-transparent
                     `}
                     onClick={handleOvenClick}
-                    title={status === 'idle' ? "Ouvrir le Grimoire" : status === 'baking' ? "Cuisson en cours..." : "Récupérer !"}
+                    title="Ouvrir le Livre de Recettes"
                 >
-                    {/* Cooking Overlays */}
-                    {status === 'baking' && <OvenTimer />}
-
-                    {status === 'done' && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-4xl animate-bounce drop-shadow-lg">✨🍪✨</span>
-                        </div>
-                    )}
                 </div>
 
                 {/* "Bocal" (Jar) Click Zone */}
                 <div
                     className={`absolute bottom-[5%] left-[42.5%] w-[15%] h-[30%] cursor-pointer rounded-lg z-20 transition-colors duration-300 outline-none focus:ring-0
-                        ${isModalOpen ? 'pointer-events-none opacity-0' : 'hover:bg-white/5 bg-transparent opacity-100'}
+                        ${showRecipeBook || isBaking ? 'pointer-events-none opacity-0' : 'hover:bg-white/5 bg-transparent opacity-100'}
                     `}
                     onClick={() => setViewMode('bocal')}
                     title="Le Bocal"
                 />
 
-                {/* Machine à Espresso (Now in Living Room) */}
+                {/* Machine à Espresso */}
                 <div
                     className={`absolute bottom-[40%] right-[10%] group cursor-pointer p-6 rounded-3xl transition-all duration-700 backdrop-blur-sm border border-white/5
                         ${isCoffeeMachineOn ? 'bg-orange-500/10 shadow-[0_0_30px_rgba(251,146,60,0.2)]' : 'hover:bg-white/5'}
-                        ${isModalOpen ? 'pointer-events-none opacity-0' : 'opacity-100'}
+                        ${showRecipeBook || isBaking ? 'pointer-events-none opacity-0' : 'opacity-100'}
                     `}
                     onClick={() => setIsCoffeeMachineOn(!isCoffeeMachineOn)}
                 >
@@ -150,30 +132,26 @@ export const LivingRoomView: React.FC = () => {
                     )}
                 </div>
 
-                {/* Chips the Cat - Adjusted position: lower and further left */}
+                {/* Chips the Cat */}
                 <div
                     className={`absolute bottom-[5%] left-[0%] group cursor-pointer p-6 transition-all duration-700
-                        ${isModalOpen ? 'pointer-events-none opacity-0' : 'opacity-100'}
+                        ${showRecipeBook || isBaking ? 'pointer-events-none opacity-0' : 'opacity-100'}
                     `}
                     onMouseEnter={() => setShowChipsTooltip(true)}
                     onMouseLeave={() => setShowChipsTooltip(false)}
                     onClick={() => console.log("Maw!")}
                 >
                     <div className="relative">
-                        {/* Ghibli Chips Asset */}
                         <img
                             src={isDay ? imgChipsDay : imgChipsNight}
                             alt="Chips"
                             className="w-40 h-auto drop-shadow-xl transition-all duration-700 group-hover:scale-105 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                         />
-
                         <div className="absolute -top-4 -right-2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
                             <span className="text-[10px] font-bold animate-pulse text-white/60">z</span>
                             <span className="text-[12px] font-bold animate-pulse [animation-delay:0.3s] ml-1 text-white/40">z</span>
                         </div>
                     </div>
-
-                    {/* Tooltip */}
                     <div className={`absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 bg-white text-slate-900 rounded-xl text-[10px] font-bold transition-all duration-500 pointer-events-none shadow-xl scale-0 group-hover:scale-100
                         ${showChipsTooltip ? 'opacity-100 -translate-y-1' : 'opacity-0 translate-y-0'}
                     `}>
@@ -183,13 +161,24 @@ export const LivingRoomView: React.FC = () => {
                 </div>
             </div>
 
-            {/* MODALS / OVERLAYS */}
-            {showGrimoire && status === 'idle' && (
-                <GrimoireView onClose={() => setShowGrimoire(false)} />
+            {/* FULLSCREENS */}
+
+            {/* 1. Recipe Book Modal */}
+            {showRecipeBook && !isBaking && (
+                <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-md flex items-center justify-center p-12 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="w-full h-full max-w-4xl max-h-[85vh] bg-white rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                        <RecipeBook onBack={() => setShowRecipeBook(false)} />
+                    </div>
+                </div>
             )}
 
-            {status === 'prep' && (
-                <PrepStation />
+            {/* 2. Baking View (Active) */}
+            {isBaking && (
+                <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-12 animate-in slide-in-from-bottom duration-500">
+                    <div className="w-full h-full max-w-4xl max-h-[85vh] bg-amber-50 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                        <BakingView />
+                    </div>
+                </div>
             )}
         </div>
     )

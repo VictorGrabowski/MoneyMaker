@@ -1,13 +1,39 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useSalaryStore } from '../store/salaryStore'
-import { useCookingStore } from '../store/cookingStore'
+import { useBakingStore } from '../store/bakingStore'
 import { useWeatherStore } from '../store/weatherStore'
 import { Maximize2, Timer } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export const MoneyWidget: React.FC = () => {
     const { displayedAccumulated, tick, setViewMode } = useSalaryStore()
     const { isDay, condition } = useWeatherStore()
-    const { status: cookingStatus, startTime, duration, checkBakingStatus } = useCookingStore()
+    const { isBaking, timeRemaining, getCurrentPhase, tickTimer } = useBakingStore()
+    const currentPhase = getCurrentPhase()
+    const [narrativeIndex, setNarrativeIndex] = useState(0)
+
+    // Narrative Cycler
+    useEffect(() => {
+        let narrativeInterval: NodeJS.Timeout;
+        if (isBaking && currentPhase) {
+            narrativeInterval = setInterval(() => {
+                setNarrativeIndex((prev) =>
+                    (prev + 1) % currentPhase.narrativeSteps.length
+                );
+            }, 8000);
+        }
+        return () => clearInterval(narrativeInterval);
+    }, [isBaking, currentPhase]);
+
+    // Baking Timer (Drive logic when in Widget Mode)
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isBaking) {
+            interval = setInterval(tickTimer, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [isBaking, tickTimer]);
+
     const [isHovered, setIsHovered] = useState(false)
     const lastTick = useRef<number>(Date.now())
 
@@ -23,8 +49,7 @@ export const MoneyWidget: React.FC = () => {
             const delta = now - lastTick.current
             tick(delta)
 
-            // Check cooking status regularly
-            checkBakingStatus()
+            // Removed legacy checkBakingStatus
 
             lastTick.current = now
         }, 16)
@@ -161,20 +186,51 @@ export const MoneyWidget: React.FC = () => {
                     {displayedAccumulated.toFixed(4)}<span className={`ml-1 ${isDay ? 'text-sky-300' : 'text-indigo-400'}`}>€</span>
                 </div>
 
-                {/* POMODORO TIMER */}
-                {cookingStatus === 'baking' && startTime && (
-                    <div className="flex items-center gap-2 mt-2 px-3 py-1 rounded-full bg-black/40 border border-white/10 shadow-lg backdrop-blur-md animate-in fade-in slide-in-from-bottom-2">
-                        <Timer size={12} className="text-orange-400 animate-pulse" />
-                        <span className="text-sm font-mono font-bold text-orange-100 tabular-nums">
-                            {(() => {
-                                const elapsed = Date.now() - startTime
-                                const remaining = Math.max(0, duration - elapsed)
-                                const totalSeconds = Math.floor(remaining / 1000)
-                                const m = Math.floor(totalSeconds / 60)
-                                const s = totalSeconds % 60
-                                return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-                            })()}
-                        </span>
+                {/* POMODORO TIMER & NARRATIVE */}
+                {isBaking && currentPhase && (
+                    <div className="flex flex-col items-center mt-1 animate-in fade-in slide-in-from-bottom-2 w-full px-4">
+
+                        {/* Narrative Text */}
+                        <div className="h-6 mb-1 flex items-center justify-center overflow-hidden gap-2">
+                            <span className="text-sm">
+                                {currentPhase.narrativeSteps[narrativeIndex]?.icon}
+                            </span>
+                            <span
+                                key={narrativeIndex}
+                                className="text-xs font-medium italic text-orange-200/90 text-center flex items-center gap-0.5"
+                                style={{ textShadow: '1px 1px 0 #000' }}
+                            >
+                                {currentPhase.narrativeSteps[narrativeIndex]?.text}
+                                <span className="flex">
+                                    <motion.span
+                                        animate={{ opacity: [0, 1, 0] }}
+                                        transition={{ duration: 1.5, repeat: Infinity, times: [0, 0.5, 1] }}
+                                    >
+                                        .
+                                    </motion.span>
+                                    <motion.span
+                                        animate={{ opacity: [0, 1, 0] }}
+                                        transition={{ duration: 1.5, delay: 0.2, repeat: Infinity, times: [0, 0.5, 1] }}
+                                    >
+                                        .
+                                    </motion.span>
+                                    <motion.span
+                                        animate={{ opacity: [0, 1, 0] }}
+                                        transition={{ duration: 1.5, delay: 0.4, repeat: Infinity, times: [0, 0.5, 1] }}
+                                    >
+                                        .
+                                    </motion.span>
+                                </span>
+                            </span>
+                        </div>
+
+                        {/* Timer */}
+                        <div className="flex items-center gap-2 px-3 py-0.5 rounded-full bg-black/40 border border-white/10 shadow-lg backdrop-blur-md">
+                            <Timer size={10} className="text-orange-400" />
+                            <span className="text-xs font-mono font-bold text-orange-100 tabular-nums">
+                                {Math.floor(timeRemaining / 60).toString().padStart(2, '0')}:{Math.floor(timeRemaining % 60).toString().padStart(2, '0')}
+                            </span>
+                        </div>
                     </div>
                 )}
             </div>

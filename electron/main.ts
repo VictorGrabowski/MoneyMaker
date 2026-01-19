@@ -39,8 +39,8 @@ function createWindow() {
         height: 1080,
         x: mainBounds.x,
         y: mainBounds.y,
-        useContentSize: true, // Ensure web content is 1920x1080
-        resizable: true, // Allow resizing but start at 1920x1080
+        useContentSize: false, // Prevent DPI scaling issues
+        resizable: true, // Allow resizing
         frame: false,
         transparent: true,
         backgroundColor: '#00000000',
@@ -81,13 +81,15 @@ function createWindow() {
             }
 
             // Setup Widget
-            // Setup Widget
             // FORCE BOTTOM RIGHT: Ignore stored position as per user request
             console.log('Switching to Widget Mode. Forcing Bottom-Right.')
 
             win.setMinimumSize(250, 100)
             win.setResizable(false)
             win.setAlwaysOnTop(true)
+
+            // RESIZE FIRST to prevent "move" event capturing large dimensions at widget position
+            win.setSize(250, 100)
 
             // Always calculate bottom-right
             const calculatePos = () => {
@@ -107,20 +109,40 @@ function createWindow() {
                 win.center() // Fallback
             }
 
-            win.setSize(250, 100) // Force size
-
         } else {
             // Saving Widget State before switching
             store.set('windowBounds.widget', { x: currentBounds.x, y: currentBounds.y })
 
             // Setup Main
-            win.setMinimumSize(1920, 1080) // Enforce min size
+            win.setMinimumSize(800, 600) // Allow resizing smaller than 1080p if needed
             win.setResizable(true)
             win.setAlwaysOnTop(false)
 
-            // Force 1920x1080 and Center
-            win.setSize(1920, 1080)
-            win.center()
+            // Retrieve saved bounds
+            const mainBounds = store.get('windowBounds.main')
+            console.log("Restoring Main Bounds from Store:", mainBounds)
+
+            // User Request: "Apply the same thing as clicking maximize" when exiting widget
+            // We set bounds first to ensure if they un-maximize later, it goes somewhere sane
+            if (mainBounds) {
+                const width = (mainBounds.width) || 1920
+                const height = (mainBounds.height) || 1080
+                const x = (typeof mainBounds.x === 'number') ? mainBounds.x : undefined
+                const y = (typeof mainBounds.y === 'number') ? mainBounds.y : undefined
+
+                if (x !== undefined && y !== undefined) {
+                    win.setBounds({ x, y, width, height })
+                } else {
+                    win.setSize(width, height)
+                    win.center()
+                }
+            } else {
+                win.setSize(1920, 1080)
+                win.center()
+            }
+
+            // FORCE MAXIMIZE as requested
+            win.maximize()
         }
     })
 

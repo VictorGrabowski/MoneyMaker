@@ -54,14 +54,14 @@ const DENOMINATIONS: ItemConfig[] = [
     { value: 20, type: 'bill', color: '#3b82f6', borderColor: '#1e3a8a', width: 266, height: 144, displayText: '20', texture: imgBill20 }, // ~1.84 ratio
     { value: 10, type: 'bill', color: '#ef4444', borderColor: '#7f1d1d', width: 254, height: 134, displayText: '10', texture: imgBill10 }, // ~1.90 ratio
     { value: 5, type: 'bill', color: '#8b5cf6', borderColor: '#4c1d95', width: 240, height: 124, displayText: '5', texture: imgBill5 }, // ~1.93 ratio
-    { value: 2, type: 'coin', color: '#fbbf24', borderColor: '#92400e', width: 103, height: 103, displayText: '2€', texture: imgCoin2 },
-    { value: 1, type: 'coin', color: '#fbbf24', borderColor: '#92400e', width: 93, height: 93, displayText: '1€', texture: imgCoin1, textureScale: 0.7 },
-    { value: 0.5, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 97, height: 97, displayText: '50', texture: imgCoin50Cents },
-    { value: 0.2, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 89, height: 89, displayText: '20', texture: imgCoinGold },
-    { value: 0.1, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 79, height: 79, displayText: '10', texture: imgCoinGold },
-    { value: 0.05, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 85, height: 85, displayText: '5', texture: imgCoin5Cents },
-    { value: 0.02, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 75, height: 75, displayText: '2', texture: imgCoinCopper },
-    { value: 0.01, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 65, height: 65, displayText: '1', texture: imgCoin1Cent, textureScale: 0.7 },
+    { value: 2, type: 'coin', color: '#fbbf24', borderColor: '#92400e', width: 103, height: 103, displayText: '2€', texture: imgCoin2, textureScale: 1.38 },
+    { value: 1, type: 'coin', color: '#fbbf24', borderColor: '#92400e', width: 93, height: 93, displayText: '1€', texture: imgCoin1, textureScale: 1.10 },
+    { value: 0.5, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 97, height: 97, displayText: '50', texture: imgCoin50Cents, textureScale: 1.24 },
+    { value: 0.2, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 89, height: 89, displayText: '20', texture: imgCoinGold, textureScale: 1.28 },
+    { value: 0.1, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 79, height: 79, displayText: '10', texture: imgCoinGold, textureScale: 1.26 },
+    { value: 0.05, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 85, height: 85, displayText: '5', texture: imgCoin5Cents, textureScale: 1.88 },
+    { value: 0.02, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 75, height: 75, displayText: '2', texture: imgCoinCopper, textureScale: 1.75 },
+    { value: 0.01, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 65, height: 65, displayText: '1', texture: imgCoin1Cent, textureScale: 1.05 },
 ]
 
 // Sorted by value ascending for slider display
@@ -225,6 +225,8 @@ export const BocalView: React.FC = () => {
     const [zoomLevel, setZoomLevel] = useState(1) // ZOOM STATE
     const zoomLevelRef = useRef(1)
     const physicsScaleRef = useRef(1)
+
+
 
     // SCROLL TO ZOOM HANDLER
     const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -528,7 +530,7 @@ export const BocalView: React.FC = () => {
             // Sleeping threshold
             sleepThreshold: 60,
             render: {
-                fillStyle: 'transparent', // HIDE native body, we draw textures manually in afterRender
+                fillStyle: 'transparent',
                 strokeStyle: 'transparent',
                 lineWidth: 0
             },
@@ -661,6 +663,10 @@ export const BocalView: React.FC = () => {
             engine: engine,
             options: {
                 width, height,
+                fillStyle: 'transparent',
+                strokeStyle: 'transparent',
+                opacity: 0,
+                lineWidth: 0,
                 wireframes: false,
                 background: 'transparent'
             }
@@ -965,8 +971,10 @@ export const BocalView: React.FC = () => {
                         context.clip()
 
                         // 3. Draw Texture Zoomed & Scaled by Animation
-                        const zoom = (denomination.textureScale ?? 1.75) * animScale
-                        const drawSize = (denomination.width * scale) * zoom
+                        // Use Specific Scale + Animation.
+                        const specificScale = denomination.textureScale ?? 1.1
+                        const drawZoom = specificScale * animScale
+                        const drawSize = (denomination.width * scale) * drawZoom
 
                         context.drawImage(
                             img,
@@ -975,12 +983,13 @@ export const BocalView: React.FC = () => {
                             drawSize,
                             drawSize
                         )
+                        // ...
 
                     } else if (denomination.type === 'ingot') {
                         // INGOTS
-                        const zoom = 1.35 * animScale
-                        const drawSizeW = (denomination.width * scale) * zoom * 1.1 // Stretched length by 10%
-                        const drawSizeH = (denomination.height * scale) * zoom * 1.2 // Stretched height by 20% total
+                        const drawZoom = (denomination.textureScale ?? 1.35) * animScale
+                        const drawSizeW = (denomination.width * scale) * drawZoom * 1.1 // Stretched length by 10%
+                        const drawSizeH = (denomination.height * scale) * drawZoom * 1.2 // Stretched height by 20% total
 
                         context.drawImage(
                             img,
@@ -992,8 +1001,8 @@ export const BocalView: React.FC = () => {
 
                     } else {
                         // BILLS
-                        const zoom = 1.35 * animScale
-                        const drawSize = (denomination.width * scale) * zoom
+                        const drawZoom = (denomination.textureScale ?? 1.35) * animScale
+                        const drawSize = (denomination.width * scale) * drawZoom
 
                         // Draw Texture as SQUARE (width x width) to preserve 1:1 source aspect
                         context.drawImage(
@@ -1061,13 +1070,13 @@ export const BocalView: React.FC = () => {
                     context.clip()
 
                     // We reuse the zoom logic to match size
-                    const zoom = 1.75
-                    const drawSize = (ghost.width * scale) * zoom
+                    const drawZoom = ghost.denomination?.textureScale ?? 1.75
+                    const drawSize = (ghost.width * scale) * drawZoom
                     context.drawImage(img, -drawSize / 2, -drawSize / 2, drawSize, drawSize)
                 } else {
                     // Bills
-                    const zoom = 1.35
-                    const drawSize = (ghost.width * scale) * zoom
+                    const drawZoom = ghost.denomination?.textureScale ?? 1.35
+                    const drawSize = (ghost.width * scale) * drawZoom
                     context.drawImage(img, -drawSize / 2, -drawSize / 2, drawSize, drawSize)
                 }
 
@@ -1093,6 +1102,8 @@ export const BocalView: React.FC = () => {
     const lastProcessedValue = useRef<number>(0)
     const spawnTimeoutsRef = useRef<NodeJS.Timeout[]>([])
     const hasManuallyEmptied = useRef(false)
+
+
 
     // Wait for physics scale to be determined before spawning
     // Wait for physics scale to be determined before spawning
@@ -1338,34 +1349,6 @@ export const BocalView: React.FC = () => {
                     Reset
                 </button>
 
-                {/* ZOOM SLIDER NEW */}
-                <div className="flex flex-col gap-2 p-4 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 w-full">
-                    <div className="flex items-center justify-between text-white text-outline text-xs font-bold uppercase tracking-wider mb-2">
-                        <span>Zoom</span>
-                        <span className="text-white text-outline">{Math.round(zoomLevel * 100)}%</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <ZoomOut size={14} className="text-slate-400" />
-                        <Slider
-                            min={1}
-                            max={1.4}
-                            step={0.1}
-                            value={zoomLevel}
-                            onChange={(val) => typeof val === 'number' && setZoomLevel(val)}
-                            trackStyle={{ backgroundColor: '#818cf8', height: 4 }}
-                            handleStyle={{
-                                border: '2px solid #818cf8',
-                                backgroundColor: '#1e1b4b',
-                                opacity: 1,
-                                width: 14,
-                                height: 14,
-                                marginTop: -5
-                            }}
-                            railStyle={{ backgroundColor: 'rgba(255,255,255,0.1)', height: 4 }}
-                        />
-                        <ZoomIn size={14} className="text-slate-400" />
-                    </div>
-                </div>
 
                 {/* DENOMINATION CAP SLIDER */}
                 <div className="flex flex-col gap-2 p-4 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 w-full">
@@ -1393,6 +1376,35 @@ export const BocalView: React.FC = () => {
                     <div className="flex justify-between text-[9px] text-white text-outline mt-1">
                         <span>1c</span>
                         <span>💎</span>
+                    </div>
+                </div>
+
+                {/* ZOOM SLIDER - RESTORED */}
+                <div className="flex flex-col gap-2 p-4 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 w-full">
+                    <div className="flex items-center justify-between text-white text-outline text-xs font-bold uppercase tracking-wider mb-2">
+                        <span>Zoom</span>
+                        <span className="text-white text-outline">{Math.round(zoomLevel * 100)}%</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <ZoomOut size={14} className="text-slate-400" />
+                        <Slider
+                            min={1.0}
+                            max={1.4}
+                            step={0.01}
+                            value={zoomLevel}
+                            onChange={(val) => typeof val === 'number' && setZoomLevel(val)}
+                            trackStyle={{ backgroundColor: '#818cf8', height: 4 }}
+                            handleStyle={{
+                                border: '2px solid #818cf8',
+                                backgroundColor: '#1e1b4b',
+                                opacity: 1,
+                                width: 14,
+                                height: 14,
+                                marginTop: -5
+                            }}
+                            railStyle={{ backgroundColor: 'rgba(255,255,255,0.1)', height: 4 }}
+                        />
+                        <ZoomIn size={14} className="text-slate-400" />
                     </div>
                 </div>
                 <div className="mt-4 border-t border-white/10 pt-4 space-y-4">

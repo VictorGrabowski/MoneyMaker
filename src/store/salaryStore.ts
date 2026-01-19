@@ -108,9 +108,17 @@ export const useSalaryStore = create<SalaryState>((set, get) => ({
     },
 
     setViewMode: (mode) => {
+        const { viewMode } = get()
         set({ viewMode: mode })
+
         if (window.electron) {
-            window.electron.switchWindowMode(mode === 'widget' ? 'widget' : 'main')
+            const isWidgetTarget = mode === 'widget'
+            const isWidgetCurrent = viewMode === 'widget'
+
+            // Only switch if actual window mode changes (Main <-> Widget)
+            if (isWidgetTarget !== isWidgetCurrent) {
+                window.electron.switchWindowMode(isWidgetTarget ? 'widget' : 'main')
+            }
         }
     },
 
