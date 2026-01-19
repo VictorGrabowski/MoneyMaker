@@ -31,7 +31,8 @@
     "publish": {
       "provider": "github",
       "owner": "VictorGrabowski",
-      "repo": "MoneyMaker"
+      "repo": "MoneyMaker",
+      "releaseType": "release"
     }
   },
   "dependencies": {
