@@ -28,7 +28,9 @@
         }
     },
     "include": [
-        "src",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.d.ts",
         "electron"
     ],
     "references": [
