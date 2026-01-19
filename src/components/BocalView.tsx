@@ -14,6 +14,9 @@ import 'rc-slider/assets/index.css'
 import imgBocalEnv from '../assets/hub/bocal_env.png'
 import imgCoin1 from '../assets/money/coin_1.png'
 import imgCoin2 from '../assets/money/coin_2.png'
+import imgCoin1Cent from '../assets/money/coin_1_cent.png'
+import imgCoin5Cents from '../assets/money/coin_5_cents.png'
+import imgCoin50Cents from '../assets/money/coin_50_cent.png'
 import imgCoinCopper from '../assets/money/coin_copper_generic.png'
 import imgCoinGold from '../assets/money/coin_gold_generic.png'
 import imgBill5 from '../assets/money/bill_5.png'
@@ -36,6 +39,7 @@ interface ItemConfig {
     height: number
     displayText: string
     texture?: string
+    textureScale?: number
 }
 
 const DENOMINATIONS: ItemConfig[] = [
@@ -51,13 +55,13 @@ const DENOMINATIONS: ItemConfig[] = [
     { value: 10, type: 'bill', color: '#ef4444', borderColor: '#7f1d1d', width: 254, height: 134, displayText: '10', texture: imgBill10 }, // ~1.90 ratio
     { value: 5, type: 'bill', color: '#8b5cf6', borderColor: '#4c1d95', width: 240, height: 124, displayText: '5', texture: imgBill5 }, // ~1.93 ratio
     { value: 2, type: 'coin', color: '#fbbf24', borderColor: '#92400e', width: 103, height: 103, displayText: '2€', texture: imgCoin2 },
-    { value: 1, type: 'coin', color: '#fbbf24', borderColor: '#92400e', width: 93, height: 93, displayText: '1€', texture: imgCoin1 },
-    { value: 0.5, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 97, height: 97, displayText: '50', texture: imgCoinGold },
+    { value: 1, type: 'coin', color: '#fbbf24', borderColor: '#92400e', width: 93, height: 93, displayText: '1€', texture: imgCoin1, textureScale: 0.7 },
+    { value: 0.5, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 97, height: 97, displayText: '50', texture: imgCoin50Cents },
     { value: 0.2, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 89, height: 89, displayText: '20', texture: imgCoinGold },
     { value: 0.1, type: 'coin', color: '#fde68a', borderColor: '#b45309', width: 79, height: 79, displayText: '10', texture: imgCoinGold },
-    { value: 0.05, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 85, height: 85, displayText: '5', texture: imgCoinCopper },
+    { value: 0.05, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 85, height: 85, displayText: '5', texture: imgCoin5Cents },
     { value: 0.02, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 75, height: 75, displayText: '2', texture: imgCoinCopper },
-    { value: 0.01, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 65, height: 65, displayText: '1', texture: imgCoinCopper },
+    { value: 0.01, type: 'coin', color: '#b45309', borderColor: '#451a03', width: 65, height: 65, displayText: '1', texture: imgCoin1Cent, textureScale: 0.7 },
 ]
 
 // Sorted by value ascending for slider display
@@ -961,7 +965,7 @@ export const BocalView: React.FC = () => {
                         context.clip()
 
                         // 3. Draw Texture Zoomed & Scaled by Animation
-                        const zoom = 1.75 * animScale
+                        const zoom = (denomination.textureScale ?? 1.75) * animScale
                         const drawSize = (denomination.width * scale) * zoom
 
                         context.drawImage(

@@ -46,8 +46,8 @@ development_status:
   1-3-bocal-view-physics: in-progress
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-radio-stations-static: backlog
+  epic-2: in-progress
+  2-1-radio-stations-static: in-progress
   2-2-weather-season-sync: backlog
   2-3-desk-lamp-toggle: backlog
   epic-2-retrospective: optional
