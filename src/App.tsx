@@ -3,8 +3,9 @@ import { WageInput } from './components/WageInput'
 import { MoneyWidget } from './components/MoneyWidget'
 import { BocalView } from './components/BocalView'
 import { RadioPlayer } from './components/RadioPlayer'
-import { WeatherLayer } from './components/WeatherLayer' // Added global import
-import { HubView } from './components/hub/HubView' // New Import
+import { WeatherLayer } from './components/WeatherLayer'
+import { HubView } from './components/hub/HubView'
+import { WindowFrame } from './components/WindowFrame' // New Import
 
 import { useWeatherStore } from './store/weatherStore'
 import { Minimize2 } from 'lucide-react'
@@ -34,11 +35,11 @@ function App() {
     return (
         <div className="relative w-full h-full overflow-hidden">
             {/* Main App Background / Container */}
+            
+            <WindowFrame /> {/* Global Window Controls */}
 
             <RadioPlayer />
             {viewMode !== 'widget' && <WeatherLayer />} {/* Global Weather Overlay */}
-
-
 
             {/* Reduce Button (Visible everywhere EXCEPT Widget) */}
             {viewMode !== 'widget' && (
@@ -55,6 +56,5 @@ function App() {
         </div>
     )
 }
-
 
 export default App
