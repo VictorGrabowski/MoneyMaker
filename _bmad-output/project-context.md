@@ -1,8 +1,8 @@
 ---
 project_name: 'MoneyMaker'
 user_name: 'V.grabowski'
-date: '2026-01-15'
-sections_completed: ['technology_stack', 'critical_rules', 'naming_conventions', 'novel_patterns']
+date: '2026-01-23'
+sections_completed: ['technology_stack', 'critical_rules', 'naming_conventions', 'novel_patterns', 'functional_index']
 ---
 
 # Project Context for AI Agents
@@ -13,11 +13,41 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ## 🛠️ Technology Stack & Versions
 
-- **Core**: Electron (v39.2.x) + React (v19.x) + Vite (v7.x)
+- **Core**: Electron (v39.2.x) + React (v18.2.x) + Vite (v5.x)
+- **Styling**: TailwindCSS (v4.x)
 - **State**: Zustand (v5.x) - Centralized store for all cross-process sync.
 - **Persistence**: `electron-store` (v8.x) - Local JSON only. **Zero-Sync policy**.
 - **Physics**: Matter.js (v0.20.x) - Soft-body simulation via Distance Constraints.
 - **Audio**: Howler.js (v2.2.x) - Multi-channel mixing (Radio vs ASMR).
+
+---
+
+## 🗺️ Functional Index
+
+_Key features mapped to their file paths and process domains._
+
+### 1. **Bocal (Interactive View)**
+*   **Path**: `src/features/bocal`
+*   **Process**: **Renderer** (Heavy Physics)
+*   **Description**: The main interactive area where coins and bills physically accumulate.
+*   **Key Files**:
+    *   `logic/renderLogic.ts`: Handles the Matter.js physics loop and rendering.
+
+### 2. **Radio (Media Player)**
+*   **Path**: `src/features/radio`
+*   **Process**: **Renderer** (Isolated)
+*   **Description**: YouTube-based audio controller for background music.
+*   **Key Files**:
+    *   `RadioController.tsx`: Manages the player state and audio overlay.
+
+### 3. **Economy Engines**
+*   **Path**: `src/store`
+*   **Process**: **Main/Renderer Shared** (Zustand)
+*   **Description**: The game's economic logic.
+*   **Key Stores**:
+    *   `salaryStore.ts`: Passive income calculation. **Critical**: Logic must handle app suspension (Catch-up pattern).
+    *   `cookingStore.ts` / `bakingStore.ts`: Active gameplay loops.
+    *   `immersionStore.ts`: World state (day/night cycle, weather).
 
 ---
 
