@@ -1,8 +1,8 @@
-# generated: 2026-01-15
+# generated: 2026-01-25T17:40:00+01:00
 # project: MoneyMaker
 # project_key: MM
 # tracking_system: file-system
-# story_location: _bmad-output/implementation-artifacts/stories
+# story_location: _bmad-output/implementation-artifacts
 
 # STATUS DEFINITIONS:
 # ==================
@@ -11,64 +11,55 @@
 #   - in-progress: Epic actively being worked on
 #   - done: All stories in epic completed
 #
-# Epic Status Transitions:
-#   - backlog → in-progress: Automatically when first story is created (via create-story)
-#   - in-progress → done: Manually when all stories reach 'done' status
-#
 # Story Status:
 #   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created in stories folder
-#   - in-progress: Developer actively working on implementation
-#   - review: Ready for code review (via Dev's code-review workflow)
+#   - ready-for-dev: Story file created
+#   - in-progress: Developer actively working
+#   - review: Ready for code review
 #   - done: Story completed
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
-#
-# WORKFLOW NOTES:
-# ===============
-# - Epic transitions to 'in-progress' automatically when first story is created
-# - Stories can be worked in parallel if team capacity allows
-# - SM typically creates next story after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-01-15
+generated: 2026-01-25T17:40:00+01:00
 project: MoneyMaker
 project_key: MM
 tracking_system: file-system
-story_location: _bmad-output/implementation-artifacts/stories
+story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
-  1-1-set-hourly-wage: done
-  1-2-minimalist-widget: done
-  1-3-bocal-view-physics: in-progress
+  epic-1: backlog
+  1-1-connect-baking-logic: backlog
+  1-2-recipe-completion-event: backlog
+  1-3-save-system-robustness: backlog
+  1-4-plant-assets: backlog
+  1-5-inventory-particles: backlog
+  1-6-hub-parallax: backlog
+  1-7-eating-sounds: backlog
+  1-8-ui-feedback-sounds: backlog
+  1-9-ambient-audio: backlog
+  1-10-fps-counter-toggle: backlog
+  1-11-hub-navigation-tooltips: backlog
+  1-12-zone-transitions: backlog
+  1-13-refactor-magic-numbers: backlog
+  1-14-persistence-type-safety: backlog
   epic-1-retrospective: optional
-
-  epic-2: in-progress
-  2-1-radio-stations-static: in-progress
-  2-2-weather-season-sync: backlog
-  2-3-desk-lamp-toggle: backlog
+  
+  epic-2: backlog
+  2-1-window-controls-in-bocal: backlog
+  2-2-baking-ui-layering: backlog
+  2-3-baking-ui-refinement: backlog
   epic-2-retrospective: optional
 
   epic-3: backlog
-  3-1-cookie-recipe-pomodoro: backlog
-  3-2-cooking-sounds: backlog
+  3-1-widget-layout-stability: backlog
+  3-2-pomodoro-circular-ui: backlog
   epic-3-retrospective: optional
 
   epic-4: backlog
-  4-1-instant-hub-transition: backlog
-  4-2-hub-zones-navigation: backlog
-  4-3-chips-sleeping: backlog
+  4-1-manual-weather-control: backlog
+  4-2-global-parallax-toggle: backlog
+  4-3-widget-transparency-toggle: backlog
+  4-4-radio-station-manager: backlog
   epic-4-retrospective: optional
-
-  epic-5: backlog
-  5-1-pet-chips-purr: backlog
-  5-2-clean-up-betises: backlog
-  epic-5-retrospective: optional
-
-  epic-6: backlog
-  6-1-notes-tab: backlog
-  6-2-historical-financial-view: backlog
-  epic-6-retrospective: optional
