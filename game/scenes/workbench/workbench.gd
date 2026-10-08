@@ -1,28 +1,32 @@
 ## Écran de travail de la refonte, en attendant la maison (epic 2) : le bocal, l'ardoise du jour,
-## la fiche de paie provisoire et la bascule en widget. Le décor est un bouche-trou.
+## la fiche de paie provisoire et le widget. Le décor est un bouche-trou.
 ##
 ## Arguments (après `--`) :
 ##   --shot=<fichier.png>   enregistre une capture, écrit un rapport puis quitte
 ##   --shot-delay=<s>       délai avant la capture (6 s par défaut)
-##   --widget               démarre en widget
+##   --widget[=<format>]    démarre en widget (pastille, bandeau ou mini_bocal)
 ## Démonstration, sans toucher à la sauvegarde :
 ##   --fill=<centimes>      montant placé dans le bocal
+##   --pour=<n>             verse ensuite n fois 5 €, pour exercer chutes et fusions
 ##   --bench=<objets>       fait tomber ce nombre d'objets et mesure les images par seconde
 ## Essais (version de développement uniquement) :
 ##   --profile=<nom>        sauvegarde à part, dans user://save_<nom>
 ##   --now=<AAAA-MM-JJTHH:MM:SS>  fait comme s'il était cette heure-là
 ##   --net=<centimes>       règle le net mensuel si rien n'est encore réglé
 ##   --jar=<pot|bocal|bonbonne>   change de bocal
+##   --discreet             active le mode discret
 extends Node2D
 
 const Denominations := preload("res://core/money/denominations.gd")
 const JarComposition := preload("res://core/money/jar_composition.gd")
 const Jar := preload("res://core/money/jar.gd")
+const GameState := preload("res://core/state/game_state.gd")
 const SalaryEngine := preload("res://core/money/salary_engine.gd")
 const WorkSchedule := preload("res://core/time/work_schedule.gd")
 const MoneyFaces := preload("res://scenes/jar/money_faces.gd")
 const JarView := preload("res://scenes/jar/jar_view.gd")
 const JarGlass := preload("res://scenes/jar/jar_glass.gd")
+const JarSounds := preload("res://scenes/jar/jar_sounds.gd")
 const WidgetView := preload("res://scenes/widget/widget_view.gd")
 const PaySheet := preload("res://scenes/workbench/pay_sheet.gd")
 
@@ -32,10 +36,9 @@ const DEMO_DAY_CENTS := 9230
 const DEMO_WEEK_CENTS := 46150
 const POUR_CENTS := 500
 
-const DESIGN_SIZE := Vector2i(1920, 1080)
-const WIDGET_SIZE := Vector2i(320, 96)
 const JAR_RECT := Rect2(380, 110, 1160, 900)
 const SLATE_POSITION := Vector2(110, 250)
+const HIDDEN_AMOUNT := "•••• €"
 
 const INK := Color(0.227, 0.149, 0.094)
 const CREAM := Color(0.965, 0.914, 0.824)
@@ -44,15 +47,14 @@ const CRUST := Color(0.851, 0.565, 0.184)
 const WALNUT := Color(0.420, 0.267, 0.137)
 const CHALK := Color(0.929, 0.902, 0.847)
 
-const HELP_LIVE := "Glisser : attraper une pièce   ·   Espace : secouer   ·   P : fiche de paie   ·   W : widget   ·   F : images/s"
-const HELP_DEMO := "Démonstration   ·   Glisser : attraper une pièce   ·   Espace : secouer   ·   + : verser 5 €   ·   W : widget"
+const HELP_LIVE := "Glisser : attraper   ·   Espace : secouer   ·   P : fiche de paie   ·   W : widget   ·   Ctrl+Maj+H : discret   ·   M : son"
+const HELP_DEMO := "Démonstration   ·   Glisser : attraper   ·   Espace : secouer   ·   + : verser 5 €   ·   W : widget   ·   M : son"
 
 var _args: Dictionary = {}
 ## Vrai : montants de démonstration, la sauvegarde n'est ni lue ni écrite.
 var _is_demo := false
 var _demo_jar: Jar
-var _in_widget := false
-var _window_before_widget: Dictionary = {}
+var _demo_discreet := false
 
 var _home: Node2D
 var _backdrop: Node2D
@@ -60,6 +62,7 @@ var _counter: ColorRect
 var _counter_edge: ColorRect
 var _jar: JarView
 var _back_glass: JarGlass
+var _sounds: JarSounds
 var _slate: Panel
 var _slate_amount: Label
 var _slate_jar: Label
@@ -85,6 +88,7 @@ func _ready() -> void:
 		if Jar.SIZES.has(_args.get("jar", "")):
 			_demo_jar.size = _args["jar"]
 		_demo_jar.set_cents(int(_args.get("fill", "0")))
+		_demo_discreet = _args.has("discreet")
 	else:
 		var testing := OS.is_debug_build()
 		if testing and _args.has("now"):
@@ -94,12 +98,16 @@ func _ready() -> void:
 			Game.set_pay(int(_args["net"]), {})
 		if testing and Jar.SIZES.has(_args.get("jar", "")):
 			Game.state.jar.set_size(_args["jar"])
+		if testing and _args.has("discreet"):
+			Game.set_discreet(true)
+		WindowModes.restore(Game.state)
 
 	_hand_font = SystemFont.new()
 	_hand_font.font_names = PackedStringArray(["Segoe Print", "Ink Free", "Comic Sans MS"])
 	_hand_font.font_weight = 700
 
 	_home = Node2D.new()
+	_home.name = "Maison"
 	add_child(_home)
 	_build_backdrop()
 	_build_slate()
@@ -114,26 +122,43 @@ func _ready() -> void:
 	_build_pay_sheet()
 	_fill_at_start()
 
+	_sounds = JarSounds.new()
+	_sounds.enabled = _is_demo or Game.state.sound_enabled
+	add_child(_sounds)
+	_jar.object_landed.connect(_on_object_landed)
+	_jar.objects_changed.connect(func(_output: int) -> void: _sounds.play_merge())
+
+	WindowModes.setup_tray(_tray_icon(textures[100]))
+	WindowModes.changed.connect(_on_window_mode_changed)
 	if not _is_demo:
 		Events.jar_changed.connect(_on_jar_changed)
 		Events.settings_changed.connect(_refresh_amounts)
+		Events.preferences_changed.connect(_on_preferences_changed)
 		Clock.second_ticked.connect(func(_now: int) -> void: _refresh_amounts())
 		if not Game.state.payroll.is_configured():
 			_show_pay_sheet(true)
 	if _args.has("widget"):
-		_set_widget_mode(true)
+		WindowModes.show_widget(_args["widget"])
+	# À partir d'ici, le moteur ne redessine que si quelque chose change : un écran au repos ne
+	# coûte presque rien. (Pas plus tôt : les faces provisoires ont besoin d'être dessinées.)
+	OS.low_processor_usage_mode = true
 	if _args.has("shot"):
 		_capture_and_quit()
 
 
 func _process(delta: float) -> void:
-	if _in_widget or _jar == null:
+	if WindowModes.in_widget or _jar == null:
 		return
 	var view := Vector2(get_viewport().get_visible_rect().size)
 	var mouse := (get_viewport().get_mouse_position() / view * 2.0 - Vector2.ONE).clamp(-Vector2.ONE, Vector2.ONE)
-	_backdrop.position = _backdrop.position.lerp(-mouse * 14.0, minf(1.0, delta * 6.0))
-	_slate.position = SLATE_POSITION - mouse * 7.0
 	_jar.parallax = mouse
+	# Rien n'est déplacé quand la souris est immobile : l'écran au repos n'est pas redessiné.
+	var backdrop_target := -mouse * 14.0
+	if _backdrop.position.distance_to(backdrop_target) > 0.05:
+		_backdrop.position = _backdrop.position.lerp(backdrop_target, minf(1.0, delta * 6.0))
+	var slate_target := SLATE_POSITION - mouse * 7.0
+	if _slate.position.distance_to(slate_target) > 0.05:
+		_slate.position = slate_target
 	_align_counter()
 	if _fps_label.visible:
 		_fps_label.text = "%d images/s · %d objets · %d en mouvement" % [
@@ -144,15 +169,24 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo or _jar == null:
 		return
+	if key.ctrl_pressed and key.shift_pressed:
+		match key.keycode:
+			KEY_H:
+				_set_discreet(not _is_discreet())
+			KEY_M:
+				WindowModes.toggle()
+		return
 	match key.keycode:
 		KEY_SPACE:
 			_jar.shake()
 		KEY_W:
-			_set_widget_mode(not _in_widget)
+			WindowModes.toggle()
 		KEY_F:
 			_fps_label.visible = not _fps_label.visible
+		KEY_M:
+			_set_sound(not _sounds.enabled)
 		KEY_P:
-			if not _is_demo and not _in_widget:
+			if not _is_demo and not WindowModes.in_widget:
 				_show_pay_sheet(not _pay_sheet.visible)
 		KEY_KP_ADD, KEY_PLUS, KEY_EQUAL:
 			if _is_demo and not _args.has("bench"):
@@ -160,11 +194,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_ESCAPE:
 			if _pay_sheet.visible:
 				_show_pay_sheet(false)
-			elif _in_widget:
-				_set_widget_mode(false)
+			elif WindowModes.in_widget:
+				WindowModes.show_home()
 
 
-# --- Montants ---
+# --- Montants et préférences ---
 
 func _jar_model() -> Jar:
 	return _demo_jar if _is_demo else Game.state.jar
@@ -178,6 +212,35 @@ func _hourly_cents() -> int:
 	if _is_demo:
 		return SalaryEngine.hourly_cents(WorkSchedule.new(), DEMO_NET_CENTS)
 	return Game.state.payroll.hourly_cents()
+
+
+func _is_discreet() -> bool:
+	return _demo_discreet if _is_demo else Game.state.discreet
+
+
+func _set_discreet(enabled: bool) -> void:
+	if _is_demo:
+		_demo_discreet = enabled
+		_refresh_amounts()
+	else:
+		Game.set_discreet(enabled)
+
+
+func _set_sound(enabled: bool) -> void:
+	if _is_demo:
+		_sounds.enabled = enabled
+	else:
+		Game.set_sound_enabled(enabled)
+
+
+func _on_preferences_changed() -> void:
+	_sounds.enabled = Game.state.sound_enabled
+	_refresh_amounts()
+
+
+## Un montant tel qu'il doit s'afficher : masqué en mode discret.
+func _shown(cents: int) -> String:
+	return HIDDEN_AMOUNT if _is_discreet() else Denominations.format_cents(cents)
 
 
 func _fill_at_start() -> void:
@@ -200,12 +263,18 @@ func _on_jar_changed(ops: Array[Dictionary]) -> void:
 
 
 func _refresh_amounts() -> void:
-	var today := Denominations.format_cents(_today_cents())
+	var today := _shown(_today_cents())
 	_slate_amount.text = today
-	_slate_jar.text = "Dans le bocal : %s" % Denominations.format_cents(_jar_model().cents())
-	_slate_rate.text = "%s de l'heure" % Denominations.format_cents(_hourly_cents())
+	_slate_jar.text = "Dans le bocal : %s" % _shown(_jar_model().cents())
+	_slate_rate.text = "%s de l'heure" % _shown(_hourly_cents())
 	_widget.amount_text = today
 	_widget.ring_progress = 0.62
+	WindowModes.set_tray_tooltip("MoneyMaker — aujourd'hui : %s" % today)
+
+
+## Pendant une pluie de pièces (lancement, rattrapage), les tintements sont adoucis.
+func _on_object_landed(value: int, strength: float) -> void:
+	_sounds.play_landing(value, strength * (0.35 if _jar.queued_count() > 12 else 1.0))
 
 
 # --- Construction de l'écran ---
@@ -227,7 +296,7 @@ func _build_backdrop() -> void:
 	wall.texture = wall_texture
 	wall.stretch_mode = TextureRect.STRETCH_SCALE
 	wall.position = Vector2(-160, -120)
-	wall.size = Vector2(DESIGN_SIZE) + Vector2(320, 240)
+	wall.size = Vector2(WindowModes.HOME_DESIGN_SIZE) + Vector2(320, 240)
 	wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_backdrop.add_child(wall)
 
@@ -257,25 +326,27 @@ func _build_backdrop() -> void:
 	window_glow.modulate = Color(1.0, 1.0, 1.0, 0.55)
 	_backdrop.add_child(window_glow)
 
+	var width := WindowModes.HOME_DESIGN_SIZE.x + 320
 	_counter = ColorRect.new()
 	_counter.color = WALNUT
-	_counter.size = Vector2(DESIGN_SIZE.x + 320, 600)
+	_counter.size = Vector2(width, 600)
+	_counter.position = Vector2(-160, 880)
 	_counter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_backdrop.add_child(_counter)
 	_counter_edge = ColorRect.new()
 	_counter_edge.color = WALNUT.lightened(0.22)
-	_counter_edge.size = Vector2(DESIGN_SIZE.x + 320, 14)
+	_counter_edge.size = Vector2(width, 14)
+	_counter_edge.position = _counter.position
 	_counter_edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_backdrop.add_child(_counter_edge)
-	_counter.position = Vector2(-160, 880)
-	_counter_edge.position = _counter.position
 
 
 ## Pose le bord du comptoir dessiné à la hauteur du comptoir sur lequel roulent les pièces.
 func _align_counter() -> void:
 	var line := _jar.position.y + _jar.counter_line() - _backdrop.position.y
-	_counter.position.y = line
-	_counter_edge.position.y = line
+	if absf(_counter.position.y - line) > 0.05:
+		_counter.position.y = line
+		_counter_edge.position.y = line
 
 
 func _build_slate() -> void:
@@ -351,9 +422,8 @@ func _build_jar(textures: Dictionary, illustrated: Array[int]) -> void:
 
 func _build_widget() -> void:
 	_widget = WidgetView.new()
-	_widget.size = Vector2(WIDGET_SIZE)
+	_widget.name = "Widget"
 	_widget.visible = false
-	_widget.expand_requested.connect(_set_widget_mode.bind(false))
 	add_child(_widget)
 
 
@@ -382,43 +452,46 @@ func _on_pay_saved(net_monthly_cents: int, schedule_values: Dictionary) -> void:
 	_show_pay_sheet(false)
 
 
-# --- Widget ---
+## Petite image de la pièce de 1 € pour la zone de notification.
+func _tray_icon(face: Texture2D) -> Texture2D:
+	var image := face.get_image()
+	if image.is_compressed():
+		image.decompress()
+	image.resize(64, 64, Image.INTERPOLATE_LANCZOS)
+	return ImageTexture.create_from_image(image)
 
-func _set_widget_mode(enabled: bool) -> void:
-	if enabled == _in_widget:
-		return
-	var window := get_window()
-	_in_widget = enabled
-	_home.visible = not enabled
-	_widget.visible = enabled
-	# En bandeau, le bocal est en pause : ce qui est gagné attend et tombera au retour.
-	_jar.set_simulating(not enabled)
-	if enabled:
+
+# --- Maison et widget ---
+
+## La fenêtre vient de changer de visage, de format ou d'opacité : l'écran s'arrange.
+func _on_window_mode_changed() -> void:
+	var in_widget := WindowModes.in_widget
+	var mini := in_widget and WindowModes.format == GameState.WIDGET_MINI_BOCAL
+	_home.visible = not in_widget
+	_widget.visible = in_widget
+	if in_widget:
 		_show_pay_sheet(false)
-		_window_before_widget = {"mode": window.mode, "size": window.size, "position": window.position}
-		window.mode = Window.MODE_WINDOWED
-		window.borderless = true
-		window.unresizable = true
-		window.always_on_top = true
-		window.transparent = true
-		window.transparent_bg = true
-		window.content_scale_size = WIDGET_SIZE
-		window.min_size = WIDGET_SIZE
-		window.size = WIDGET_SIZE
-		var area := DisplayServer.screen_get_usable_rect(window.current_screen)
-		window.position = area.position + area.size - WIDGET_SIZE - Vector2i(24, 24)
-		OS.low_processor_usage_mode = true
+		_widget.size = Vector2(WindowModes.widget_size())
+		_widget.format = WindowModes.format
+		_widget.modulate.a = WindowModes.opacity
+
+	# Le bocal suit : dans le widget en format mini-bocal, sur le comptoir sinon.
+	if mini and _jar.get_parent() != _widget:
+		_jar.reparent(_widget, false)
+	elif not mini and _jar.get_parent() != _home:
+		_jar.reparent(_home, false)
+		_home.move_child(_jar, _back_glass.get_index() + 1)
+	if mini:
+		var place := _widget.jar_rect()
+		_jar.position = place.position
+		_jar.size = place.size
+		_jar.parallax = Vector2.ZERO
 	else:
-		OS.low_processor_usage_mode = false
-		window.transparent_bg = false
-		window.transparent = false
-		window.always_on_top = false
-		window.unresizable = false
-		window.borderless = false
-		window.content_scale_size = DESIGN_SIZE
-		window.size = _window_before_widget["size"]
-		window.position = _window_before_widget["position"]
-		window.mode = _window_before_widget["mode"]
+		_jar.position = JAR_RECT.position
+		_jar.size = JAR_RECT.size
+	_jar.compact = mini
+	# En pastille et en bandeau, le bocal est en pause : ce qui est gagné attend et tombera au retour.
+	_jar.set_simulating(not in_widget or mini)
 
 
 # --- Capture et rapport (essais) ---
@@ -426,25 +499,48 @@ func _set_widget_mode(enabled: bool) -> void:
 func _capture_and_quit() -> void:
 	var delay := float(_args.get("shot-delay", "6"))
 	await get_tree().create_timer(delay).timeout
-	# --pour=<n> : en démonstration, verse n fois 5 € pour exercer chutes et fusions.
 	if _is_demo and _args.has("pour"):
 		for _i in int(_args["pour"]):
 			_on_jar_changed(_demo_jar.add_cents(POUR_CENTS))
 			await get_tree().create_timer(0.5).timeout
 		await get_tree().create_timer(5.0).timeout
 
+	# --exercise : enchaîne ce qu'on fait à la main (secouer, les trois formats, l'opacité, le
+	# retour à la maison) et note par où la fenêtre est passée.
+	var visited: Array[String] = []
+	if _args.has("exercise"):
+		_jar.shake()
+		await get_tree().create_timer(1.0).timeout
+		visited.append("secoué : %d en mouvement" % _jar.awake_count())
+		for _i in 3:
+			if WindowModes.in_widget:
+				WindowModes.cycle_format()
+			else:
+				WindowModes.show_widget(GameState.WIDGET_PASTILLE)
+			await get_tree().create_timer(1.0).timeout
+			visited.append("%s %s, bocal dans %s" % [WindowModes.format, get_window().size, _jar.get_parent().name])
+		WindowModes.nudge_opacity(-1)
+		WindowModes.nudge_opacity(-1)
+		visited.append("opacité %.2f" % _widget.modulate.a)
+		WindowModes.show_home()
+		await get_tree().create_timer(1.5).timeout
+		visited.append("maison %s, bocal dans %s à %s" % [get_window().size, _jar.get_parent().name, _jar.position])
+
 	var model := _jar_model()
 	var report := {
+		"parcours": visited,
 		"objets": _jar.object_count(),
 		"en_mouvement": _jar.awake_count(),
 		"en_attente": _jar.queued_count(),
 		"hors_bocal": _jar.outside_count(),
 		"niveau_du_tas": snappedf(_jar.pile_level(), 0.01),
 		"vitesse_max": str(_jar.max_speeds()),
-		"aujourd_hui": Denominations.format_cents(_today_cents()),
+		"aujourd_hui": _shown(_today_cents()),
+		"sons_joues": _sounds.plays,
+		"icone_zone_notification": WindowModes.has_tray(),
 	}
 	if not _args.has("bench"):
-		report["bocal"] = "%s (%s)" % [Denominations.format_cents(model.cents()), model.size]
+		report["bocal"] = "%s (%s)" % [_shown(model.cents()), model.size]
 		report["cible"] = model.target_count()
 		report["niveau"] = snappedf(model.fullness(), 0.01)
 		report["conforme_au_modele"] = _jar.content() == model.composition
@@ -458,8 +554,9 @@ func _capture_and_quit() -> void:
 		report["depart"] = Game.started_from
 		report["jour_en_cours"] = payroll.open_day
 		report["jours_clos"] = payroll.ledger.size()
-		report["cumul"] = Denominations.format_cents(payroll.total_earned_cents)
 	if _args.has("bench"):
+		# Mesure sans frein : ni synchronisation verticale, ni pause entre deux images.
+		OS.low_processor_usage_mode = false
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 		await get_tree().create_timer(1.0).timeout
 		var frames_before := Engine.get_frames_drawn()
@@ -469,19 +566,25 @@ func _capture_and_quit() -> void:
 		report["images_par_seconde_sans_vsync"] = roundi((Engine.get_frames_drawn() - frames_before) / seconds)
 		report["en_mouvement"] = _jar.awake_count()
 
+	# En mode économie, le moteur ne redessine que si quelque chose change : pour la capture,
+	# on le remet en dessin continu.
+	OS.low_processor_usage_mode = false
+	_widget.queue_redraw()
+	_slate.queue_redraw()
 	await RenderingServer.frame_post_draw
 	var image := get_viewport().get_texture().get_image()
 	image.save_png(_args["shot"])
 
 	var window := get_window()
 	report["fenetre"] = "%s à %s" % [window.size, window.position]
-	if _in_widget:
+	if WindowModes.in_widget:
+		report["format"] = WindowModes.format
+		report["opacite"] = WindowModes.opacity
 		report["transparence_disponible"] = DisplayServer.is_window_transparency_available()
 		report["drapeau_transparent"] = DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_TRANSPARENT)
 		report["drapeau_premier_plan"] = DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP)
 		report["drapeau_sans_bordure"] = DisplayServer.window_get_flag(DisplayServer.WINDOW_FLAG_BORDERLESS)
 		report["alpha_du_coin"] = image.get_pixel(0, 0).a
-		report["alpha_du_centre"] = image.get_pixel(image.get_width() / 2, image.get_height() / 2).a
-		report["economie_processeur"] = OS.low_processor_usage_mode
+	report["economie_processeur"] = OS.low_processor_usage_mode
 	print("RAPPORT ", JSON.stringify(report))
 	get_tree().quit()

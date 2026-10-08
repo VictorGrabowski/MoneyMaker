@@ -37,7 +37,8 @@ const COIN_THICKNESS := 0.10
 const BILL_THICKNESS := 0.035
 ## Rayon du dessin dans sa texture : faces provisoires (money_face.gdshader) et illustrations.
 const FACE_FILL := 0.93
-const ART_FILL := 0.90
+## Les prompts demandent une coupure qui occupe 92 % de son image (art-direction.md).
+const ART_FILL := 0.92
 ## Diamètres proportionnels aux vraies pièces.
 const COIN_DIAMETER: Dictionary = {
 	1: 0.50, 2: 0.58, 5: 0.66, 10: 0.61, 20: 0.69, 50: 0.75, 100: 0.72, 200: 0.80,
@@ -104,6 +105,9 @@ var _drop_budget := 0.0
 var _generation := 0
 var _simulating := true
 var _guard_in := GUARD_PERIOD
+var _was_busy := true
+## Une image de plus est demandée (cadrage, taille ou contenu changés).
+var _redraw_requested := true
 
 var _grabbed: RigidBody3D = null
 var _grab_depth := 0.0
@@ -164,8 +168,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not _simulating:
 		return
-	_camera_offset = _camera_offset.lerp(parallax, minf(1.0, delta * 6.0))
-	_place_camera()
+	var camera_moving := _camera_offset.distance_to(parallax) > 0.002
+	if camera_moving:
+		_camera_offset = _camera_offset.lerp(parallax, minf(1.0, delta * 6.0))
+		_place_camera()
 
 	_drop_budget = minf(_drop_budget + _drop_rate * delta, 4.0)
 	while _drop_budget >= 1.0 and not _queue.is_empty():
@@ -173,6 +179,23 @@ func _process(delta: float) -> void:
 		_drop_budget -= 1.0
 	if _queue.is_empty():
 		_drop_rate = DROPS_PER_SECOND
+
+	# Le bocal n'est redessiné que si quelque chose y bouge : au repos, il ne coûte rien.
+	var busy := camera_moving or _grabbed != null or not _pending.is_empty() or _is_anything_moving()
+	if busy:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	elif _was_busy or _redraw_requested:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_was_busy = busy
+	_redraw_requested = false
+
+
+## Vrai tant qu'un objet tombe, roule ou disparaît.
+func _is_anything_moving() -> bool:
+	for child in _objects.get_children():
+		if child.has_meta(&"leaving") or not (child as RigidBody3D).sleeping:
+			return true
+	return false
 
 
 func _physics_process(delta: float) -> void:
@@ -313,7 +336,9 @@ func shake() -> void:
 ## Met le bocal en pause (ni simulation ni rendu) ou le relance. Ce qui devait tomber attend.
 func set_simulating(enabled: bool) -> void:
 	_simulating = enabled
-	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if enabled else SubViewport.UPDATE_DISABLED
+	_redraw_requested = true
+	if not enabled:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	PhysicsServer3D.space_set_active(_viewport.find_world_3d().space, enabled)
 
 
@@ -360,6 +385,7 @@ func _frame() -> void:
 	_camera_target = Vector3(0.0, center, 0.0)
 	_camera_home = Vector3(0.0, center + 0.9, distance)
 	_place_camera()
+	_redraw_requested = true
 
 
 func _place_camera() -> void:
@@ -419,6 +445,7 @@ func _bodies() -> Array[RigidBody3D]:
 
 
 func _clear() -> void:
+	_redraw_requested = true
 	_generation += 1
 	_queue.clear()
 	_pending.clear()

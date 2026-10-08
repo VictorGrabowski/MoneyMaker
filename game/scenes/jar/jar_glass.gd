@@ -13,15 +13,23 @@ var jar: JarView
 ## true : fond du bocal, à placer derrière les pièces. false : vitre avant.
 var is_back := false
 
+var _face := PackedVector2Array()
 
+
+## Le verre n'est redessiné que si le bocal a bougé à l'écran.
 func _process(_delta: float) -> void:
-	queue_redraw()
-
-
-func _draw() -> void:
 	if jar == null or not jar.is_inside_tree():
 		return
 	var face := jar.jar_face_points(-1.0 if is_back else 1.0)
+	if face != _face:
+		_face = face
+		queue_redraw()
+
+
+func _draw() -> void:
+	if _face.size() != 4:
+		return
+	var face := _face
 	var top_left := face[0]
 	var top_right := face[1]
 	var bottom_right := face[2]

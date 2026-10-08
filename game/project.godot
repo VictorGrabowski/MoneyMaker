@@ -21,6 +21,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 Events="*res://services/events.gd"
 Clock="*res://services/clock.gd"
 Game="*res://services/game.gd"
+WindowModes="*res://services/window_modes.gd"
 
 [display]
 
