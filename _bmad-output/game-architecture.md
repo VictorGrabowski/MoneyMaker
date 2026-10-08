@@ -74,6 +74,8 @@ La cible du GDD (2 % d'un processeur 4 cœurs, soit 8 % d'un cœur) est tenue en
 
 **Epic 2 — La maison (décor provisoire).** Les huit stories sont écrites, en attente de relecture. 112 tests hors écran. Vérifié par captures et par un parcours scripté (`--tour`) sur une sauvegarde d'essai : balayage d'un bout à l'autre, les cinq ambiances de lumière (aube, jour, heure dorée, heure bleue, nuit), les cinq météos, les quatre saisons, les six gros plans, l'aller-retour du bocal entre comptoir, gros plan et mini-bocal, une fenêtre 16:10 et une fenêtre ultra-large, un jour marqué « congé », le pointage manuel. Les deux adresses d'Open-Meteo ont été appelées pour de bon : relevé météo de Paris et recherche de « Lyon » (cinq réponses).
 
+**Après le premier essai de Victor (2026-10-08).** Il a redemandé deux choses de la v1 : fusionner l'argent à la main et secouer le bocal entier. Écrites le jour même (décisions D28 et D29, ADR-013 et ADR-014). 125 tests hors écran. Un essai joué avec de vrais événements souris (`--gestures`) passe sur un Pot à 43 % et sur un Pot plein, salaire arrêté puis salaire qui tombe : aucune pièce hors du bocal après les secousses, valeur inchangée au centime après les fusions, affichage conforme à l'état. Charge inchangée (maison au repos 2 %, salaire qui tombe sur un pot qui déborde 24 % d'un cœur).
+
 **Mesures de l'epic 2**, même machine, deux fils de travail (voir ADR-011) :
 
 | Situation | Processeur | Mémoire |
@@ -94,7 +96,7 @@ Ce qui coûte encore : chaque pièce qui tombe réveille tout le tas (le bocal s
 
 - le flux GitHub `game-tests.yml` n'a encore jamais tourné (rien n'est poussé) ;
 - les performances sur un portable de bureau ;
-- les gestes à la souris (attraper une pièce, tapoter, glisser le widget, clic droit, molette ; à la maison : survol et clic des objets, balayage par les bords de l'écran, saisie au clavier dans les feuilles) : écrits, pas exercés par les essais automatiques, qui ouvrent les gros plans par le code ;
+- les gestes à la souris, pour partie. Depuis le 2026-10-08, un essai (`--gestures`) envoie de vrais événements souris au jeu et constate : bocal secoué sur le comptoir sans que le gros plan s'ouvre, gros plan ouvert d'un clic, fusion à deux et à trois en faisant glisser une pièce (même valeur au centime, affichage conforme à l'état), bocal saisi par la paroi, clic droit à travers le mini-bocal. Restent écrits mais jamais exercés : tapoter, lancer une pièce, déplacer le widget à la souris (et donc le balancement du mini-bocal par un vrai déplacement de fenêtre), la molette, le survol des objets de la maison, le balayage par les bords de l'écran, la saisie au clavier dans les feuilles. Et aucune main humaine n'a encore dit si ces gestes sont agréables ;
 - l'icône de la zone de notification : créée selon le moteur, pas vue à l'écran ;
 - les sons : joués sans erreur, jamais écoutés ;
 - le repli hors ligne de la météo : écrit (une requête qui échoue garde la dernière météo connue), pas essayé réseau coupé ;
@@ -236,16 +238,17 @@ En place au 2026-10-08 : `Events`, `Clock`, `Game`, `WindowModes`, `Atmosphere`.
 
 **But :** de l'argent dessiné qui a une vraie profondeur.
 
-Écrit à l'epic 1 : le modèle dans `core/money/jar.gd` (14 tests), la scène dans `scenes/jar/`.
+Écrit à l'epic 1, complété le 2026-10-08 (fusion à la main, bocal qu'on secoue) : le modèle dans `core/money/jar.gd` (19 tests) et `core/money/denominations.gd` (7 tests), la scène dans `scenes/jar/`.
 
-**Le modèle décide, la scène joue.**
+**Le modèle décide, la scène joue — sauf pour ce que fait la main.**
 
 - `Jar` connaît la taille, le contenu (nombre d'objets par coupure) et les repères de salaire. Plein à ras bord, un bocal vaut un jour (Pot), une semaine (Bocal) ou un mois (Bonbonne) de salaire.
-- Le nombre d'objets visé suit le niveau : `niveau × objets-quand-plein` (90, 160, 240), 12 au minimum, 24 de plus au maximum quand le bocal déborde. Calculé en entiers.
+- Le nombre d'objets ne dépasse pas ce que demande le niveau : `niveau × objets-quand-plein` (90, 160, 240), 12 au minimum, 24 de plus au maximum quand le bocal déborde. Calculé en entiers.
 - Chaque ajout renvoie une liste d'**opérations** : `tomber` (ces coupures tombent), `fusionner` (celles-ci n'en font plus qu'une), `casser` (celle-ci en donne de plus petites).
 - **Quelle fusion ?** Celle dont l'ingrédient principal « encombre » le plus : nombre d'objets de cette coupure ÷ sa part dans `PROFILE`. Le profil donne beaucoup de pièces de 1 et 2 €, de la petite monnaie, peu de billets. Une casse suit la même mesure, en sens inverse.
-- Un centime qui tombe déclenche au plus une fusion. Une casse n'arrive que si le nombre d'objets est à plus de 2 sous la cible (rattrapage, changement de salaire, changement de taille).
+- Un centime qui tombe déclenche au plus une fusion. **Une casse ne touche que ce qui vient de tomber** (un rattrapage arrivé en gros billets) : ce qui était déjà là, la joueuse l'a peut-être fusionné exprès. Seuls un changement de capacité ou de taille recomposent tout le bocal.
 - `Events.jar_changed(opérations)` porte ces opérations à la scène. Après les avoir jouées, l'écran compare le contenu de la scène à celui du modèle ; en cas d'écart, il refait le bocal et écrit un avertissement.
+- **Fusion à la main :** ici c'est la scène qui décide, parce qu'elle seule sait quelles coupures se touchent. `Denominations.hand_merge(tenue, touchée, contenu)` dit ce que le geste donne (la table de casse lue à l'envers, plus « trois pareilles rendent la monnaie ») ; la scène joue la fusion, émet `merged_by_hand(entrées, sorties)`, et `Game.exchange_in_jar()` l'inscrit dans le modèle par `Jar.exchange()`, qui vérifie que les coupures y sont et que la valeur est conservée. Après des fusions à la main, le bocal compte moins d'objets que sa cible : les centimes suivants tombent sans fusionner jusqu'à ce que le compte y soit.
 
 **La scène.**
 
@@ -255,6 +258,13 @@ En place au 2026-10-08 : `Events`, `Clock`, `Game`, `WindowModes`, `Atmosphere`.
 - **Une pièce** = un cylindre pour la tranche + deux faces carrées portant le dessin. **Un billet** = une plaque + deux faces. Maillages et matériaux partagés par coupure.
 - **Faces :** l'illustration de `assets/art/money/` si elle existe, sinon une face provisoire dessinée par shader. Une illustration arrive sur fond blanc : `art_face.gdshader` la détoure par sa forme et retire le blanc dans la bande du bord, en gardant le trait de contour.
 - **Deux couches de collision :** parois (1), objets (2). Le clic ne vise que la couche 2, sinon il s'arrête sur la vitre.
+- **Deux corps pour les parois.** Un corps fixe : le comptoir, ses butées, les deux faces de la tranche. Un corps animé (`AnimatableBody3D`), le bocal lui-même : un fond qui affleure le comptoir et deux parois de verre prolongées sous le fond, pour que rien ne roule sous un bocal soulevé.
+- **La main** passe par trois fonctions, `press_at()`, `drag_to()`, `release()`, que la vignette appelle pour ses propres événements et que la maison appelle quand c'est elle qui reçoit les clics (bocal sur le comptoir). La position de la souris vient des événements, jamais d'une lecture du curseur : un essai peut donc rejouer les gestes avec de vrais événements.
+  - Sur une paroi (à 0,22 unité près), ou dans un vide du bocal : on saisit le bocal. Il suit la main sur 0,8 unité de chaque côté et 1 vers le haut, à 7 et 4,5 unités/s au plus, puis retourne à sa place. Relâché sans avoir bougé, c'est un tapotement.
+  - Sur une coupure : on l'attrape. Après 0,35 unité de trajet, si elle touche une coupure avec qui elle peut fusionner, la fusion se fait dans la main et la nouvelle coupure y reste.
+  - En mini-bocal, la vignette laisse passer ce qu'elle ne prend pas : clic droit, molette, double-clic et appui dans le vide reviennent au widget. Déplacer la fenêtre pousse le contenu en sens inverse de son accélération (`sway()`).
+- **Pendant une secousse, la physique passe de 60 à 180 pas par seconde.** À 60, une pièce en l'air et une paroi qui vient à sa rencontre se croisent en un seul pas, et la pièce se retrouve dehors à travers le verre (constaté sur capture).
+- **Une pièce tombée dehors** retourne dans le bocal après 3 s au repos, tant que le tas est sous 80 % de la hauteur : elle s'éclipse et retombe d'en haut.
 - **Le verre** est dessiné en 2D, derrière et devant la vignette, à partir de la projection des coins du bocal : il suit la parallaxe et la taille.
 - **Cadrage :** la caméra se règle sur la taille du bocal et la forme de la vignette ; cadrage serré (`compact`) dans le widget.
 - **Chute :** 40 objets par seconde, davantage quand il y en a beaucoup, pour que tout soit tombé en 8 s.
@@ -554,6 +564,7 @@ var started_from: String                          # "sauvegarde", "reprise_v1", 
 func boot(profile: String = "") -> void           # inerte tant que boot() n'est pas appelé
 func set_pay(net_monthly_cents: int, schedule_values: Dictionary) -> void   # peut porter "manual_clocking"
 func set_clocked_in(clocked_in: bool) -> void     # pointage manuel : commence ou termine la journée
+func exchange_in_jar(inputs: Array, outputs: Array) -> bool   # fusion à la main, déjà jouée par la scène
 func set_day_mark(day: String, kind: String) -> bool   # "conge", "ferie", "sans_solde", "" pour retirer
 func set_city(city_name: String, latitude: float, longitude: float) -> void
 func clear_city() -> void
@@ -707,6 +718,12 @@ Contexte : recomposer le contenu idéal à chaque centime changeait de 2 à 18 o
 
 **ADR-009 — Mise au repos par amortissement, pas par gel.**
 Options : figer les objets posés (comme la v1) ou les amortir. Décision : amortir. Raison : un objet figé reste en l'air quand ce qui le portait disparaît dans une fusion, ce qui arrive à chaque centime.
+
+**ADR-013 — La fusion à la main se décide dans la scène, et le bocal ne la défait pas.**
+Contexte : Victor a redemandé la fusion de la v1, où tout ce qui se touchait fusionnait. Reprise telle quelle, elle viderait la jauge : un Pot plein tiendrait en trois billets. Décision : seule la coupure tenue par la joueuse fusionne, avec celle qu'elle touche. C'est la scène qui décide (elle seule connaît les contacts) et le modèle qui enregistre, à l'inverse du reste du bocal. Conséquence : le modèle ne casse plus que ce qui vient de tomber, sans quoi il aurait recassé les billets de la joueuse au centime suivant pour retrouver son compte d'objets.
+
+**ADR-014 — Le bocal secoué est un vrai corps qui bouge, pas un tremblement d'image.**
+Options : faire trembler l'image et pousser les pièces (la v1), ou déplacer les parois. Décision : un corps animé (fond et parois) qui suit la main, sur un comptoir qui reste fixe. Raisons : les pièces sont brassées par le verre, celles qui sont dehors restent sur le comptoir, et le geste marche pareil sur le comptoir, en gros plan et dans les essais. Prix : la physique à 180 pas par seconde le temps de la secousse, et une vitesse plafonnée.
 
 **ADR-010 — Mobile plus tard : le calcul reste hors du moteur.**
 Contexte : Victor envisage une application Android et iOS avec widget d'écran d'accueil. Le jeu s'exporte sur mobile, mais un widget d'écran d'accueil est un composant natif (Kotlin, Swift) qui ne peut pas faire tourner le moteur. Décision, sans coût aujourd'hui : garder la paie dans `core/`, calculée uniquement à partir de l'heure et des réglages, et garder ces réglages dans un fichier JSON simple. Un widget natif pourra refaire le même calcul sans que le jeu soit lancé. Non étudié : les limites de rafraîchissement des widgets de chaque système, l'adaptation de l'écran au tactile et au format portrait.

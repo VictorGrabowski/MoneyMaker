@@ -94,7 +94,7 @@ Réponses aux huit hypothèses du premier jet.
 | R-1.4 | En pastille et en bandeau, le bocal est en pause ; ce qui est gagné tombe au retour | Tenir la charge processeur du widget |
 | R-1.5 | Le jeu ne redessine l'écran que si quelque chose bouge | Mesuré : au repos, de 30 à 45 % d'un cœur à environ 1 % |
 | R-1.6 | Les illustrations de coupures sont détourées par le jeu, par leur forme | Gemini ne produit pas de fond transparent ; un détourage à la main serait une corvée |
-| R-1.7 | Secouer le bocal se fait à la touche Espace, pas en faisant glisser le bocal | Le glisser sert déjà à attraper une pièce |
+| R-1.7 | ~~Secouer le bocal se fait à la touche Espace, pas en faisant glisser le bocal~~ — remplacée par D29 et R-1.13 : le bocal se saisit par le verre | Le glisser sert déjà à attraper une pièce |
 
 ## 2026-10-08 — Règles précisées pendant l'epic 2
 
@@ -112,6 +112,28 @@ Victor n'a rien pu essayer ce jour-là : R-2.1 et R-2.2 ajoutent des objets à l
 | R-2.8 | La caisse montre le ticket de la journée à partir de l'heure de fin ; avant, elle montre celui de la dernière journée payée. Le ticket dépasse de la caisse tant qu'il n'a pas été lu | On peut relire son dernier ticket à tout moment |
 | R-2.9 | La maison remplit toujours la hauteur de la fenêtre : agrandie sur un écran 16:10 ou 4:3, plus large à l'image sur un écran ultra-large | Pas de bandes vides, quel que soit l'écran de la destinataire |
 | R-2.10 | À la maison, la touche Espace ne secoue le bocal qu'en gros plan (et en mini-bocal) | Sur le comptoir, le bocal n'est qu'un objet parmi d'autres ; Espace servira au minuteur (GDD) |
+
+## 2026-10-08 — Quatrième série d'arbitrages de Victor, après son premier essai de la maison
+
+« C'est pas mal, mais on a perdu la feature de fusion de l'argent pour en faire de plus gros billets, et j'aimerais pouvoir secouer le bocal entier. »
+
+| # | Décision | Statut | Effet |
+|---|---|---|---|
+| D28 | La fusion à la main revient, comme dans la v1 : on fait de plus gros billets en rapprochant des coupures | décidé | Modifie M2 du GDD. La fusion automatique (R-1.1) reste ; la main s'y ajoute |
+| D29 | On doit pouvoir secouer le bocal entier | décidé | Modifie M2 du GDD ; remplace R-1.7, qui réservait la secousse à la touche Espace |
+
+**Règles précisées pour D28 et D29** (écrites et essayées le même jour ; Victor ne les a pas encore eues en main) :
+
+| # | Règle | Pourquoi |
+|---|---|---|
+| R-1.8 | La coupure tenue fusionne avec une semblable **qu'elle touche**, et la nouvelle reste en main : en continuant de glisser, on enchaîne. Dans la v1, tout ce qui se touchait fusionnait ; ici, seule la main déclenche | Le bocal est une jauge : si tout fusionnait au contact, un Pot plein tiendrait en trois billets |
+| R-1.9 | Pour une fusion à trois (2 € + 2 € + 1 €), la troisième coupure est la plus proche dans le bocal ; elle vient d'elle-même. Sans elle, trois pareilles rendent la monnaie (3 × 2 c → 5 c + 1 c), comme dans la v1 | Réunir trois coupures précises sous la souris serait laborieux |
+| R-1.10 | Attraper n'est pas fusionner : il faut que la main ait parcouru un peu de chemin (0,35 unité, environ un centimètre de bocal) depuis la saisie ou la dernière fusion, et 0,28 s entre deux fusions | Sans cela, cliquer sur une pièce au milieu de ses semblables la ferait fusionner en chaîne avant qu'on ait bougé |
+| R-1.11 | **Le bocal ne défait jamais ce que la main a fait.** Il ne casse plus que ce qui vient de tomber (un rattrapage arrivé en gros billets). Après des fusions à la main, il compte moins d'objets que son niveau n'en demande ; les centimes suivants tombent sans fusionner jusqu'à ce que le compte y soit | Avant, le bocal aurait recassé les billets de la joueuse dans les trois secondes pour retrouver son compte. Conséquence assumée : la jauge dit « au plus tant d'objets », plus « exactement tant » |
+| R-1.12 | Enregistrer la fiche de paie sans que la capacité du bocal change ne recompose rien | Même raison : ne pas casser des billets faits à la main pour un salaire inchangé |
+| R-1.13 | Secouer : en gros plan, on saisit le bocal par une paroi de verre (le curseur change) ou par un vide à l'intérieur ; sur le comptoir, on le fait glisser, et un simple clic l'ouvre toujours ; en mini-bocal, déplacer le widget remue le contenu. Le bocal suit la main sur 0,8 unité de chaque côté et 1 vers le haut, à vitesse plafonnée (7 de côté, 4,5 vers le haut) | Mesuré sur un Pot plein : à vitesse presque double, une demi-seconde de secousse jetait 55 pièces sur 88 par-dessus bord |
+| R-1.14 | Une pièce tombée hors du bocal y retourne d'elle-même après 3 s au repos, une toutes les demi-secondes, tant que le tas reste sous 80 % de la hauteur. Au-delà, le bocal déborde pour de bon et elle reste sur le comptoir (R-1.3) | Rien de laborieux : on ne ramasse pas ses pièces une à une après avoir joué |
+| R-1.15 | Dans le mini-bocal, le clic droit, la molette et le double-clic traversent le bocal jusqu'au widget ; un appui dans le vide déplace la fenêtre ; seul un appui sur une pièce est pour le bocal | Corrige un défaut de l'epic 1 que personne n'avait pu voir : la vignette du bocal avalait ces gestes sur presque toute la surface du mini-bocal |
 
 ## Repris du GDD v1
 

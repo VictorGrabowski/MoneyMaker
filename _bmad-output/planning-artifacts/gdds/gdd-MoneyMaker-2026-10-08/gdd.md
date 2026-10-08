@@ -24,6 +24,7 @@ inputDocuments:
 
 > Ce document remplace le GDD de la v1 (Electron). Il décrit **ce que la joueuse vit**, pas comment c'est construit : l'architecture est dans `game-architecture.md`.
 > Victor a validé ce document le 8 octobre 2026 (voir `decision-log.md`). Aucune hypothèse ne reste ouverte.
+> Modifié le même jour après son premier essai : fusion à la main et bocal qu'on secoue en entier (M2, D28 et D29).
 
 ---
 
@@ -194,9 +195,10 @@ Chaque mécanique indique les piliers qu'elle sert.
 | Bocal | 1 semaine de net | 160 | Catalogue, 12 € |
 | Bonbonne | 1 mois de net | 240 | Catalogue, 45 € |
 
-- **Fusion paresseuse :** le nombre d'objets visibles suit le remplissage (objets visibles = remplissage × objets-quand-plein, minimum 12). Quand il y a un objet de trop, deux ou trois coupures fusionnent en une plus grosse (2 × 1 c → 2 c, etc. ; table de fusion reprise de la v1), une seule fusion à la fois. Le choix de la fusion garde au bocal ses proportions : beaucoup de pièces de 1 et 2 €, de la petite monnaie, peu de billets. Un Pot plein à 2 000 € net contient ainsi environ 85 pièces et 4 billets. La fusion est automatique, accompagnée d'un petit « pouf ».
+- **Fusion paresseuse :** le nombre d'objets visibles ne dépasse pas le remplissage (remplissage × objets-quand-plein, minimum 12). Quand il y a un objet de trop, deux ou trois coupures fusionnent en une plus grosse (2 × 1 c → 2 c, etc. ; table de fusion reprise de la v1), une seule fusion à la fois. Le choix de la fusion garde au bocal ses proportions : beaucoup de pièces de 1 et 2 €, de la petite monnaie, peu de billets. Un Pot plein à 2 000 € net contient ainsi environ 85 pièces et 4 billets. Cette fusion-là est automatique, accompagnée d'un petit « pouf ».
+- **Fusion à la main** (ajoutée le 8 octobre 2026 à la demande de Victor, comme dans la v1) : la joueuse fait glisser une coupure sur une semblable et elles fusionnent en une plus grosse, qui reste dans sa main ; en continuant de glisser, elle fait de plus en plus gros. Même table de fusion ; pour une fusion à trois (2 € + 2 € + 1 € → 5 €), la troisième coupure vient d'elle-même du bocal, et trois pareilles rendent la monnaie (3 × 2 c → 5 c + 1 c). **Le bocal ne défait jamais ce que la main a fait :** il compte alors moins d'objets que son niveau n'en demande, et les centimes suivants tombent sans fusionner jusqu'à ce que le compte y soit de nouveau.
 - **Débordement :** le bocal est ouvert. Au-delà de 100 %, il accepte jusqu'à 24 objets de plus : le tas dépasse du bord et des pièces roulent sur le comptoir. Rien n'est perdu.
-- **Jouer :** attraper et lancer une pièce (glisser), secouer le bocal (touche Espace), tapoter la vitre (clic). Aucune récompense, aucune conséquence.
+- **Jouer :** attraper et lancer une pièce, fusionner des coupures, tapoter la vitre (clic), **secouer le bocal entier** en le saisissant par le verre (ou, sur le comptoir, en le faisant glisser ; touche Espace en gros plan ; en mini-bocal, en déplaçant le widget). Une pièce tombée dehors retourne d'elle-même dans le bocal tant qu'il y a de la place. Aucune récompense, aucune conséquence.
 - **Sensation « coussin » :** les pièces gonflent légèrement à l'impact puis reprennent leur forme en 0,15 s. Rebond faible : une pièce lâchée de la hauteur du bocal s'immobilise en moins de 1,5 s.
 - **Coupures :** 8 pièces (1 c à 2 €), 7 billets (5 € à 500 €), lingot (1 000 €), gemme (10 000 €).
 
@@ -363,6 +365,8 @@ Chaque mécanique indique les piliers qu'elle sert.
 |---|---|---|
 | Interagir | Clic gauche | L'objet survolé s'éclaircit ; léger rebond au clic |
 | Saisir, déplacer | Clic gauche maintenu + glisser | L'objet se soulève, ombre portée |
+| Fusionner des coupures | Glisser une coupure sur une semblable | « Pouf » ; la nouvelle coupure reste en main |
+| Secouer le bocal | Glisser le bocal (par le verre, en gros plan), ou Espace en gros plan | Le bocal suit la main, les pièces tintent |
 | Changer de lieu | Clic sur une porte | Fondu de 0,4 s |
 | Balayer la maison | Souris vers un bord, ou Q/D | Défilement horizontal doux |
 | Feuilleter | Clic sur un coin de page, ←/→ | Bruit de papier, page tournée en 0,25 s |

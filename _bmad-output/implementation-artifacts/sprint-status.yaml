@@ -54,7 +54,10 @@ development_status:
   # core/money/jar.gd : trois tailles, jauge, fusion guidée par un profil. Seul le Pot est possédé
   # pour l'instant ; Bocal et Bonbonne s'achèteront au catalogue (epic 10), --jar permet de les essayer.
   1-3-tailles-de-bocal-et-fusion-paresseuse: review
-  # Attraper, lancer, tapoter : écrits, pas exercés par les essais automatiques. Secouer : exercé.
+  # Repris le 2026-10-08 après l'essai de Victor (D28, D29) : fusion à la main en faisant glisser une
+  # coupure sur ses semblables, bocal qu'on saisit par le verre et qu'on secoue (sur le comptoir, en gros
+  # plan), mini-bocal remué quand on déplace le widget. Exercés par --gestures avec de vrais événements
+  # souris : secouer, fusionner à deux et à trois. Lancer, tapoter : écrits, pas exercés.
   # L'effet coussin est un gonflement bref, pas un écrasement.
   1-4-attraper-secouer-tapoter: review
   # Bocal ouvert : le tas dépasse et des pièces roulent sur le comptoir. À 130 % : 3 pièces dehors ; à 171 % : 8.
@@ -62,7 +65,8 @@ development_status:
   # Le contenu (coupures) est retrouvé à l'identique ; les positions ne sont pas sauvegardées, tout retombe.
   1-6-pluie-de-rattrapage: review
   # scenes/widget/widget_view.gd, services/window_modes.gd. Format, position et opacité retenus.
-  # Glisser, clic droit et molette : écrits, pas exercés par les essais automatiques.
+  # Glisser et molette : écrits, pas exercés par les essais automatiques. Clic droit : exercé depuis le
+  # 2026-10-08, y compris à travers le bocal du mini-bocal, qui l'avalait jusque-là (corrigé).
   1-7-widget-trois-formats: review
   # Mode discret : vérifié sur captures. Icône de la zone de notification : créée selon le moteur,
   # pas vérifiée à l'œil ; pas de menu, un clic bascule maison / widget.
