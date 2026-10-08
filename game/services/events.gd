@@ -17,3 +17,7 @@ signal settings_changed
 ## Une préférence d'affichage a changé (mode discret, widget, son).
 @warning_ignore("unused_signal")
 signal preferences_changed
+
+## La ville ou la météo ont changé.
+@warning_ignore("unused_signal")
+signal world_changed

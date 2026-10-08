@@ -6,6 +6,7 @@ const Payroll := preload("res://core/money/payroll.gd")
 const Jar := preload("res://core/money/jar.gd")
 const SalaryEngine := preload("res://core/money/salary_engine.gd")
 const GameCalendar := preload("res://core/time/game_calendar.gd")
+const Weather := preload("res://core/world/weather.gd")
 const Migrations := preload("res://core/save/migrations.gd")
 
 const WIDGET_PASTILLE := "pastille"
@@ -31,6 +32,21 @@ var widget_opacity := 1.0
 ## Mode discret : les montants sont masqués.
 var discreet := false
 var sound_enabled := true
+
+# --- Le monde ---
+## Ville de la joueuse, pour le soleil et la météo. Les coordonnées sont arrondies au dixième de degré.
+var city_name := ""
+var latitude := 0.0
+var longitude := 0.0
+var has_city := false
+var weather_mode := Weather.MODE_REAL
+## Météo choisie à la main (mode manuel).
+var manual_weather := Weather.CLEAR
+## Dernière météo réelle connue, et quand elle a été relevée (secondes locales, 0 = jamais).
+var last_weather := Weather.CLEAR
+var last_weather_at := 0
+## Dernier jour dont le ticket du soir a été lu (« AAAA-MM-JJ »).
+var ticket_seen_day := ""
 
 
 ## Fait avancer la paie et verse les centimes gagnés dans le bocal. Renvoie ces centimes.
@@ -73,6 +89,65 @@ func set_widget_position(position: Vector2i) -> void:
 	has_widget_position = true
 
 
+## Retient la ville. Les coordonnées sont arrondies : elles ne servent qu'au soleil et à la météo.
+func set_city(name: String, city_latitude: float, city_longitude: float) -> void:
+	city_name = name.strip_edges()
+	latitude = roundf(clampf(city_latitude, -90.0, 90.0) * 10.0) / 10.0
+	longitude = roundf(clampf(city_longitude, -180.0, 180.0) * 10.0) / 10.0
+	has_city = city_name != ""
+	# La météo connue était celle d'une autre ville.
+	last_weather_at = 0
+
+
+func clear_city() -> void:
+	city_name = ""
+	latitude = 0.0
+	longitude = 0.0
+	has_city = false
+	last_weather_at = 0
+
+
+func set_weather_mode(mode: String) -> void:
+	if Weather.MODES.has(mode):
+		weather_mode = mode
+
+
+func set_manual_weather(state: String) -> void:
+	if Weather.is_state(state):
+		manual_weather = state
+
+
+## Retient la météo réelle qui vient d'être relevée.
+func remember_weather(state: String, now_local: int) -> void:
+	if Weather.is_state(state):
+		last_weather = state
+		last_weather_at = now_local
+
+
+## La météo à montrer : celle choisie à la main, sinon la dernière connue, sinon un ciel clair.
+func shown_weather() -> String:
+	if weather_mode == Weather.MODE_MANUAL:
+		return manual_weather
+	return last_weather if last_weather_at > 0 else Weather.CLEAR
+
+
+## Le ticket du soir à montrer : le dernier jour travaillé terminé. {} s'il n'y en a pas.
+## { "day": String, "worked_seconds": int, "cents": int }
+func evening_ticket(now_local: int) -> Dictionary:
+	var today := GameCalendar.date_of(now_local)
+	var schedule := payroll.schedule
+	var day_is_over := GameCalendar.second_of_day(now_local) >= schedule.end_minute * 60
+	if payroll.open_day == today and day_is_over and payroll.open_day_credited > 0:
+		return {"day": today, "worked_seconds": payroll.open_day_worked, "cents": payroll.open_day_credited}
+	var days := payroll.ledger.keys()
+	days.sort()
+	for i in range(days.size() - 1, -1, -1):
+		var line: Dictionary = payroll.ledger[days[i]]
+		if line["cents"] > 0:
+			return {"day": days[i], "worked_seconds": line["worked_seconds"], "cents": line["cents"]}
+	return {}
+
+
 func to_dict(now_local: int) -> Dictionary:
 	var paid := payroll.to_dict()
 	var widget := {"format": widget_format, "opacity": widget_opacity}
@@ -83,10 +158,14 @@ func to_dict(now_local: int) -> Dictionary:
 		"saved_at": now_local,
 		"settings": paid["settings"],
 		"preferences": {"widget": widget, "discreet": discreet, "sound": sound_enabled},
+		"world": {
+			"city": {"name": city_name, "latitude": latitude, "longitude": longitude} if has_city else {},
+			"weather": {"mode": weather_mode, "manual": manual_weather, "last": last_weather, "last_at": last_weather_at},
+		},
 		"payroll": paid["state"],
 		"ledger": paid["ledger"],
 		"jar": jar.to_dict(),
-		"stats": {"first_day": first_day},
+		"stats": {"first_day": first_day, "ticket_seen_day": ticket_seen_day},
 	}
 
 
@@ -103,6 +182,21 @@ func load_dict(data: Dictionary) -> void:
 
 	var stats := _dictionary(data.get("stats"))
 	first_day = str(stats.get("first_day", ""))
+	ticket_seen_day = str(stats.get("ticket_seen_day", ""))
+
+	var world := _dictionary(data.get("world"))
+	clear_city()
+	var city := _dictionary(world.get("city"))
+	if str(city.get("name", "")).strip_edges() != "":
+		set_city(str(city["name"]), float(city.get("latitude", 0.0)), float(city.get("longitude", 0.0)))
+	var saved_weather := _dictionary(world.get("weather"))
+	weather_mode = Weather.MODE_REAL
+	set_weather_mode(str(saved_weather.get("mode", Weather.MODE_REAL)))
+	manual_weather = Weather.CLEAR
+	set_manual_weather(str(saved_weather.get("manual", Weather.CLEAR)))
+	last_weather = Weather.CLEAR
+	last_weather_at = 0
+	remember_weather(str(saved_weather.get("last", Weather.CLEAR)), maxi(0, int(saved_weather.get("last_at", 0))))
 
 	var preferences := _dictionary(data.get("preferences"))
 	discreet = bool(preferences.get("discreet", false))

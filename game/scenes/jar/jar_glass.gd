@@ -6,6 +6,8 @@ const JarView := preload("res://scenes/jar/jar_view.gd")
 
 const GLASS_LINE := Color(1.0, 1.0, 1.0, 0.55)
 const GLASS_HALO := Color(0.78, 0.90, 0.93, 0.22)
+## Liseré sombre sous le trait clair : sans lui, le verre disparaît devant un mur clair.
+const GLASS_EDGE := Color(0.24, 0.30, 0.36, 0.42)
 const GLASS_TINT := Color(0.80, 0.90, 0.92, 0.10)
 const HIGHLIGHT := Color(1.0, 1.0, 1.0, 0.24)
 
@@ -53,6 +55,7 @@ func _draw() -> void:
 	# Paroi : un U ouvert en haut, aux angles arrondis.
 	var outline := _u_path(top_left, top_right, bottom_right, bottom_left, 0.07 * width)
 	draw_polyline(outline, GLASS_HALO, line * 3.0, true)
+	draw_polyline(outline, GLASS_EDGE, line * 1.7, true)
 	draw_polyline(outline, GLASS_LINE, line, true)
 
 	# Col : une ellipse aplatie.
@@ -62,6 +65,7 @@ func _draw() -> void:
 		var angle := TAU * i / 48.0
 		rim.append(center + Vector2(cos(angle) * width * 0.5, sin(angle) * width * 0.032))
 	draw_polyline(rim, GLASS_HALO, line * 2.4, true)
+	draw_polyline(rim, GLASS_EDGE, line * 1.4, true)
 	draw_polyline(rim, GLASS_LINE, line * 0.8, true)
 
 	# Reflets.

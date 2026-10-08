@@ -210,6 +210,55 @@ func test_manual_clocking_is_capped_per_day() -> void:
 	check_eq(payroll.ledger[MON]["worked_seconds"], Payroll.MANUAL_DAY_CAP_SECONDS, "16 h au plus")
 
 
+func test_switching_to_manual_clocking_keeps_the_time_already_counted() -> void:
+	var payroll := _payroll()
+	check_eq(payroll.advance(_at(MON, "11:00")), 2637, "2 h selon l'horaire")
+	payroll.set_manual_clocking(true, _at(MON, "11:00"))
+	check_eq(payroll.advance(_at(MON, "12:00")), 0, "pas pointé : rien ne tombe")
+	payroll.clock_in(_at(MON, "12:00"))
+	check_eq(payroll.advance(_at(MON, "13:00")), 1319, "1 h pointée en plus des 2 h déjà comptées")
+	check_eq(payroll.earned_today(), 3956, "3 h en tout")
+
+
+func test_switching_back_to_the_schedule_clocks_out() -> void:
+	var payroll := _payroll()
+	payroll.set_manual_clocking(true, _at(MON, "08:00"))
+	payroll.advance(_at(MON, "08:00"))
+	payroll.clock_in(_at(MON, "08:00"))
+	payroll.advance(_at(MON, "10:00"))
+	payroll.set_manual_clocking(false, _at(MON, "10:00"))
+	check(not payroll.is_clocked_in(), "plus en pointage")
+	check(not payroll.manual_clocking, "retour à l'horaire")
+	# L'horaire ne compte qu'une heure à 10 h : les deux heures pointées ne sont pas reprises.
+	check_eq(payroll.advance(_at(MON, "10:30")), 0, "rien n'est repris, rien n'est payé deux fois")
+	check_eq(payroll.earned_today(), 2637, "les 2 h pointées restent acquises")
+
+
+func test_working_now_follows_the_schedule() -> void:
+	var payroll := _payroll()
+	check(not payroll.is_working_at(_at(MON, "08:59")), "avant l'heure")
+	check(payroll.is_working_at(_at(MON, "09:00")), "début de journée")
+	check(not payroll.is_working_at(_at(MON, "12:30")), "pause déjeuner")
+	check(payroll.is_working_at(_at(MON, "13:00")), "reprise")
+	check(not payroll.is_working_at(_at(MON, "17:00")), "fin de journée")
+	check(not payroll.is_working_at(_at(SAT, "10:00")), "samedi")
+	payroll.set_day_mark(TUE, Payroll.KIND_UNPAID)
+	check(not payroll.is_working_at(_at(TUE, "10:00")), "jour sans solde")
+	payroll.set_day_mark(WED, Payroll.KIND_LEAVE)
+	check(payroll.is_working_at(_at(WED, "10:00")), "un congé reste payé aux heures habituelles")
+
+
+func test_working_now_follows_the_clocking_when_manual() -> void:
+	var payroll := _payroll()
+	payroll.manual_clocking = true
+	payroll.advance(_at(MON, "10:00"))
+	check(not payroll.is_working_at(_at(MON, "10:00")), "pas pointé")
+	payroll.clock_in(_at(MON, "20:00"))
+	check(payroll.is_working_at(_at(MON, "20:30")), "pointé, même hors horaire")
+	payroll.clock_out(_at(MON, "21:00"))
+	check(not payroll.is_working_at(_at(MON, "21:00")), "dépointé")
+
+
 func test_nothing_breaks_without_working_days() -> void:
 	var payroll := _payroll()
 	payroll.schedule.working_days = []

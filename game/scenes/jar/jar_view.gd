@@ -108,6 +108,8 @@ var _guard_in := GUARD_PERIOD
 var _was_busy := true
 ## Une image de plus est demandée (cadrage, taille ou contenu changés).
 var _redraw_requested := true
+## Temps passé à simuler et redessiner depuis le lancement, en secondes : pour mesurer ce que coûte le bocal.
+var busy_seconds := 0.0
 
 var _grabbed: RigidBody3D = null
 var _grab_depth := 0.0
@@ -183,6 +185,7 @@ func _process(delta: float) -> void:
 	# Le bocal n'est redessiné que si quelque chose y bouge : au repos, il ne coûte rien.
 	var busy := camera_moving or _grabbed != null or not _pending.is_empty() or _is_anything_moving()
 	if busy:
+		busy_seconds += delta
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	elif _was_busy or _redraw_requested:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE

@@ -48,6 +48,23 @@ func test_seasons() -> void:
 	check_eq(GameCalendar.season_of(GameCalendar.local_from_text("2027-07-15")), GameCalendar.SUMMER, "juillet")
 
 
+func test_dates_in_words() -> void:
+	check_eq(GameCalendar.long_date("2026-10-08"), "jeudi 8 octobre 2026", "date ordinaire")
+	check_eq(GameCalendar.long_date("2026-11-01"), "dimanche 1er novembre 2026", "premier du mois")
+	check_eq(GameCalendar.month_name(8), "août", "nom de mois")
+	check_eq(GameCalendar.date_from(2026, 3, 7), "2026-03-07", "date fabriquée")
+	check_eq(GameCalendar.year_of("2026-10-08"), 2026, "année")
+	check_eq(GameCalendar.month_of("2026-10-08"), 10, "mois")
+	check_eq(GameCalendar.day_of_month("2026-10-08"), 8, "jour du mois")
+
+
+func test_first_weekday_of_month_starts_on_monday() -> void:
+	# Octobre 2026 commence un jeudi, novembre un dimanche, juin un lundi.
+	check_eq(GameCalendar.first_weekday_of_month(2026, 10), 3, "jeudi")
+	check_eq(GameCalendar.first_weekday_of_month(2026, 11), 6, "dimanche")
+	check_eq(GameCalendar.first_weekday_of_month(2026, 6), 0, "lundi")
+
+
 func test_valid_dates() -> void:
 	check(GameCalendar.is_valid_date("2026-10-08"), "date correcte")
 	check(GameCalendar.is_valid_date("2028-02-29"), "29 février d'une année bissextile")

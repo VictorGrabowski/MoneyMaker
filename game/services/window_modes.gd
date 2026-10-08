@@ -20,6 +20,8 @@ const SCREEN_MARGIN := Vector2i(24, 24)
 const OPACITY_STEP := 0.05
 ## En widget, 30 images par seconde suffisent, même quand le mini-bocal s'anime.
 const WIDGET_MAX_FPS := 30
+## À la maison, 60 : la pluie ou la neige animent l'écran en continu, inutile d'aller plus vite.
+const HOME_MAX_FPS := 60
 
 var in_widget := false
 var format := GameState.WIDGET_BANDEAU
@@ -29,6 +31,10 @@ var _home_window: Dictionary = {}
 var _position := Vector2i.ZERO
 var _has_position := false
 var _tray: StatusIndicator
+
+
+func _ready() -> void:
+	Engine.max_fps = HOME_MAX_FPS
 
 
 ## Reprend les préférences sauvegardées. À appeler une fois l'état du jeu chargé.
@@ -81,7 +87,7 @@ func show_home() -> void:
 		return
 	var window := get_window()
 	in_widget = false
-	Engine.max_fps = 0
+	Engine.max_fps = HOME_MAX_FPS
 	window.transparent_bg = false
 	window.transparent = false
 	window.always_on_top = false
@@ -103,6 +109,18 @@ func cycle_format() -> void:
 		show_widget(next)
 	else:
 		format = next
+
+
+## Choisit le format du widget, qu'on y soit déjà ou non.
+func choose_format(new_format: String) -> void:
+	if not WIDGET_SIZES.has(new_format) or new_format == format:
+		return
+	if in_widget:
+		show_widget(new_format)
+		return
+	format = new_format
+	_remember()
+	changed.emit()
 
 
 ## Rend le widget un peu plus (+1) ou un peu moins (-1) opaque.

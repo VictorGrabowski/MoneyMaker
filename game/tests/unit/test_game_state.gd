@@ -3,6 +3,7 @@ extends "res://tests/test_case.gd"
 const GameState := preload("res://core/state/game_state.gd")
 const GameCalendar := preload("res://core/time/game_calendar.gd")
 const Jar := preload("res://core/money/jar.gd")
+const Weather := preload("res://core/world/weather.gd")
 const Migrations := preload("res://core/save/migrations.gd")
 
 
@@ -142,6 +143,67 @@ func test_preferences_refuse_nonsense() -> void:
 	state.load_dict({"preferences": {"widget": {"format": 7, "opacity": "x", "position": [1]}, "discreet": 1}})
 	check_eq(state.widget_format, GameState.WIDGET_BANDEAU, "format illisible ignoré")
 	check(not state.has_widget_position, "position illisible ignorée")
+
+
+func test_city_is_rounded_and_survives_a_reload() -> void:
+	var state := _configured()
+	state.set_city("  Lyon ", 45.7640, 4.8357)
+	check(state.has_city, "ville connue")
+	check_eq(state.city_name, "Lyon", "nom sans espaces autour")
+	check_eq(state.latitude, 45.8, "latitude au dixième")
+	check_eq(state.longitude, 4.8, "longitude au dixième")
+	var reloaded := _reload(state, "2026-10-05T15:00:00")
+	check_eq(reloaded.city_name, "Lyon", "nom rechargé")
+	check_eq(reloaded.latitude, 45.8, "latitude rechargée")
+	state.clear_city()
+	check(not state.has_city, "ville oubliée")
+	check(not _reload(state, "2026-10-05T15:00:00").has_city, "toujours oubliée après rechargement")
+	state.set_city("", 10.0, 10.0)
+	check(not state.has_city, "une ville sans nom n'est pas retenue")
+
+
+func test_shown_weather_follows_the_mode() -> void:
+	var state := _configured()
+	check_eq(state.shown_weather(), Weather.CLEAR, "ciel clair tant que rien n'est connu")
+	state.remember_weather(Weather.RAIN, _at("2026-10-05T15:00:00"))
+	check_eq(state.shown_weather(), Weather.RAIN, "dernière météo réelle")
+	state.set_manual_weather(Weather.SNOW)
+	check_eq(state.shown_weather(), Weather.RAIN, "le choix manuel attend le mode manuel")
+	state.set_weather_mode(Weather.MODE_MANUAL)
+	check_eq(state.shown_weather(), Weather.SNOW, "choix manuel")
+	state.set_manual_weather("canicule")
+	state.set_weather_mode("au hasard")
+	check_eq(state.shown_weather(), Weather.SNOW, "valeurs inconnues ignorées")
+	var reloaded := _reload(state, "2026-10-05T15:00:00")
+	check_eq(reloaded.weather_mode, Weather.MODE_MANUAL, "mode rechargé")
+	check_eq(reloaded.shown_weather(), Weather.SNOW, "météo rechargée")
+	check_eq(reloaded.last_weather, Weather.RAIN, "dernière météo réelle rechargée")
+
+
+func test_changing_city_forgets_the_known_weather() -> void:
+	var state := _configured()
+	state.set_city("Lyon", 45.8, 4.8)
+	state.remember_weather(Weather.FOG, _at("2026-10-05T15:00:00"))
+	state.set_city("Brest", 48.4, -4.5)
+	check_eq(state.last_weather_at, 0, "la météo de Lyon ne vaut pas pour Brest")
+	check_eq(state.shown_weather(), Weather.CLEAR, "ciel clair en attendant")
+
+
+func test_evening_ticket() -> void:
+	var state := _configured()
+	state.advance(_at("2026-10-05T15:00:00"))
+	check(state.evening_ticket(_at("2026-10-05T15:00:00")).is_empty(), "pas de ticket avant la fin de la première journée")
+	state.advance(_at("2026-10-05T17:30:00"))
+	var ticket := state.evening_ticket(_at("2026-10-05T17:30:00"))
+	check_eq(ticket.get("day"), "2026-10-05", "ticket du jour après 17 h")
+	check_eq(ticket.get("cents"), 9230, "montant du jour")
+	check_eq(ticket.get("worked_seconds"), 25200, "7 h travaillées")
+	# Le lendemain en fin de matinée : le ticket montré est encore celui de la veille.
+	state.advance(_at("2026-10-06T11:00:00"))
+	check_eq(state.evening_ticket(_at("2026-10-06T11:00:00")).get("day"), "2026-10-05", "ticket de la veille")
+	# Le week-end ne produit pas de ticket : on garde celui du vendredi.
+	state.advance(_at("2026-10-11T12:00:00"))
+	check_eq(state.evening_ticket(_at("2026-10-11T12:00:00")).get("day"), "2026-10-09", "ticket du vendredi, le dimanche")
 
 
 func test_migrations_accept_only_known_versions() -> void:

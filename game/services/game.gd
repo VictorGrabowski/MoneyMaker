@@ -62,15 +62,33 @@ func boot(profile: String = "") -> void:
 
 ## Change le salaire et les horaires. Prend effet tout de suite pour la journée en cours ;
 ## les jours clos ne bougent pas.
+## `schedule_values` peut aussi porter "manual_clocking" (pointage à la main plutôt qu'à l'horaire).
 func set_pay(net_monthly_cents: int, schedule_values: Dictionary) -> void:
 	state.payroll.net_monthly_cents = maxi(0, net_monthly_cents)
 	state.payroll.apply_schedule_dict(schedule_values)
+	if schedule_values.has("manual_clocking"):
+		state.payroll.set_manual_clocking(bool(schedule_values["manual_clocking"]), Clock.now_local())
 	Events.settings_changed.emit()
 	_on_second(Clock.now_local())
 	# Un bocal plein ne vaut plus la même somme : son niveau change, donc son nombre d'objets.
 	var ops := state.rebalance_jar()
 	if not ops.is_empty():
 		Events.jar_changed.emit(ops)
+	request_save()
+
+
+## Pointage manuel : commence (true) ou termine (false) la journée. Sans effet à l'horaire.
+func set_clocked_in(clocked_in: bool) -> void:
+	var now := Clock.now_local()
+	if not state.payroll.manual_clocking or clocked_in == state.payroll.is_clocked_in():
+		return
+	# Ce qui a été gagné jusqu'ici est versé avant de dépointer.
+	_on_second(now)
+	if clocked_in:
+		state.payroll.clock_in(now)
+	else:
+		state.payroll.clock_out(now)
+	Events.settings_changed.emit()
 	request_save()
 
 
@@ -88,6 +106,51 @@ func set_sound_enabled(enabled: bool) -> void:
 		return
 	state.sound_enabled = enabled
 	Events.preferences_changed.emit()
+	request_save()
+
+
+## Marque aujourd'hui ou un jour à venir (congé, férié, sans solde ; "" pour retirer la marque).
+## Faux si la marque est refusée.
+func set_day_mark(day: String, kind: String) -> bool:
+	if not state.payroll.set_day_mark(day, kind):
+		return false
+	Events.settings_changed.emit()
+	_on_second(Clock.now_local())
+	request_save()
+	return true
+
+
+func set_city(city_name: String, latitude: float, longitude: float) -> void:
+	state.set_city(city_name, latitude, longitude)
+	Events.world_changed.emit()
+	request_save()
+
+
+func clear_city() -> void:
+	state.clear_city()
+	Events.world_changed.emit()
+	request_save()
+
+
+## Choisit entre la météo réelle et une météo fixée à la main.
+func set_weather(mode: String, manual_state: String) -> void:
+	state.set_weather_mode(mode)
+	state.set_manual_weather(manual_state)
+	Events.world_changed.emit()
+	request_save()
+
+
+## Retient la météo réelle qui vient d'être relevée.
+func remember_weather(weather_state: String) -> void:
+	state.remember_weather(weather_state, Clock.now_local())
+	Events.world_changed.emit()
+	request_save()
+
+
+func mark_ticket_seen(day: String) -> void:
+	if state.ticket_seen_day == day:
+		return
+	state.ticket_seen_day = day
 	request_save()
 
 

@@ -13,6 +13,13 @@ const SUMMER := "ete"
 const AUTUMN := "automne"
 const WINTER := "hiver"
 
+const MONTH_NAMES: Array[String] = [
+	"janvier", "février", "mars", "avril", "mai", "juin",
+	"juillet", "août", "septembre", "octobre", "novembre", "décembre",
+]
+## Dans l'ordre du moteur : 0 = dimanche.
+const WEEKDAY_NAMES: Array[String] = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]
+
 
 static func date_of(local: int) -> String:
 	return Time.get_date_string_from_unix_time(local)
@@ -78,10 +85,10 @@ static func is_valid_date(day: String) -> bool:
 			return false
 	var year := parts[0].to_int()
 	var month := parts[1].to_int()
-	var day_of_month := parts[2].to_int()
-	if year < 1970 or month < 1 or month > 12 or day_of_month < 1:
+	var number := parts[2].to_int()
+	if year < 1970 or month < 1 or month > 12 or number < 1:
 		return false
-	return day_of_month <= days_in_month(year, month)
+	return number <= days_in_month(year, month)
 
 
 static func days_in_month(year: int, month: int) -> int:
@@ -89,3 +96,40 @@ static func days_in_month(year: int, month: int) -> int:
 		var leap := (year % 4 == 0 and year % 100 != 0) or year % 400 == 0
 		return 29 if leap else 28
 	return 30 if month in [4, 6, 9, 11] else 31
+
+
+static func date_from(year: int, month: int, day_of_month: int) -> String:
+	return "%04d-%02d-%02d" % [year, month, day_of_month]
+
+
+static func year_of(day: String) -> int:
+	return day.substr(0, 4).to_int()
+
+
+static func month_of(day: String) -> int:
+	return day.substr(5, 2).to_int()
+
+
+static func day_of_month(day: String) -> int:
+	return day.substr(8, 2).to_int()
+
+
+## « octobre » pour 10.
+static func month_name(month: int) -> String:
+	return MONTH_NAMES[clampi(month, 1, 12) - 1]
+
+
+## « jeudi 8 octobre 2026 », « dimanche 1er novembre 2026 ».
+static func long_date(day: String) -> String:
+	var number := day_of_month(day)
+	return "%s %s %s %d" % [
+		WEEKDAY_NAMES[weekday_of_date(day)],
+		"1er" if number == 1 else str(number),
+		month_name(month_of(day)),
+		year_of(day),
+	]
+
+
+## Place du premier jour du mois dans une semaine qui commence le lundi : 0 = lundi … 6 = dimanche.
+static func first_weekday_of_month(year: int, month: int) -> int:
+	return (weekday_of_date(date_from(year, month, 1)) + 6) % 7

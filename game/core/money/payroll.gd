@@ -108,6 +108,30 @@ func is_clocked_in() -> bool:
 	return clocked_in_at >= 0
 
 
+## Passe de l'horaire au pointage manuel, ou l'inverse. Le temps déjà compté aujourd'hui est
+## gardé : en passant au pointage, la journée reprend où l'horaire l'avait menée.
+func set_manual_clocking(enabled: bool, now_local: int) -> void:
+	if manual_clocking == enabled:
+		return
+	if enabled:
+		manual_worked_today = open_day_worked
+	else:
+		clock_out(now_local)
+	manual_clocking = enabled
+
+
+## Vrai si le temps compte en ce moment : pointage en cours, ou heure de travail d'un jour travaillé.
+func is_working_at(now_local: int) -> bool:
+	var day := GameCalendar.date_of(now_local)
+	if day_marks.get(day, "") == KIND_UNPAID:
+		return false
+	if manual_clocking:
+		return clocked_in_at >= 0
+	var weekday := GameCalendar.weekday_of_date(day)
+	var second := GameCalendar.second_of_day(now_local)
+	return schedule.worked_seconds_on(weekday, second + 1) > schedule.worked_seconds_on(weekday, second)
+
+
 ## Pointage d'arrivée (sans effet hors pointage manuel).
 func clock_in(now_local: int) -> void:
 	if manual_clocking and clocked_in_at < 0:

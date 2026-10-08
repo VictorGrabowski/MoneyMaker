@@ -28,7 +28,7 @@ const JarView := preload("res://scenes/jar/jar_view.gd")
 const JarGlass := preload("res://scenes/jar/jar_glass.gd")
 const JarSounds := preload("res://scenes/jar/jar_sounds.gd")
 const WidgetView := preload("res://scenes/widget/widget_view.gd")
-const PaySheet := preload("res://scenes/workbench/pay_sheet.gd")
+const PaySheet := preload("res://scenes/closeups/pay_sheet.gd")
 
 ## Salaire de la démonstration : 2 000 € net, 35 h par semaine.
 const DEMO_NET_CENTS := 200000
@@ -443,7 +443,7 @@ func _build_pay_sheet() -> void:
 
 func _show_pay_sheet(shown: bool) -> void:
 	if shown:
-		_pay_sheet.show_values(Game.state.payroll.net_monthly_cents, Game.state.payroll.schedule)
+		_pay_sheet.show_values(Game.state.payroll.net_monthly_cents, Game.state.payroll.schedule, Game.state.payroll.manual_clocking)
 	_pay_sheet.visible = shown
 
 
