@@ -1,8 +1,9 @@
-# generated: 2026-01-25T17:40:00+01:00
-# project: MoneyMaker
+# generated: 2026-10-08
+# project: MoneyMaker (refonte Godot)
 # project_key: MM
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
+# source: _bmad-output/planning-artifacts/gdds/gdd-MoneyMaker-2026-10-08/epics.md
 
 # STATUS DEFINITIONS:
 # ==================
@@ -17,49 +18,98 @@
 #   - in-progress: Developer actively working
 #   - review: Ready for code review
 #   - done: Story completed
-#
-# Retrospective Status:
-#   - optional: Can be completed but not required
-#   - done: Retrospective has been completed
 
-generated: 2026-01-25T17:40:00+01:00
+generated: 2026-10-08
 project: MoneyMaker
 project_key: MM
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: backlog
-  1-1-connect-baking-logic: backlog
-  1-2-recipe-completion-event: backlog
-  1-3-save-system-robustness: backlog
-  1-4-plant-assets: backlog
-  1-5-inventory-particles: backlog
-  1-6-hub-parallax: backlog
-  1-7-eating-sounds: backlog
-  1-8-ui-feedback-sounds: backlog
-  1-9-ambient-audio: backlog
-  1-10-fps-counter-toggle: backlog
-  1-11-hub-navigation-tooltips: backlog
-  1-12-zone-transitions: backlog
-  1-13-refactor-magic-numbers: backlog
-  1-14-persistence-type-safety: backlog
+  epic-0: in-progress
+  # Retirés le 2026-10-08 (deux installeurs et un téléchargement interrompu). L'historique git n'est pas purgé.
+  0-1-retirer-les-installeurs-du-depot: done
+  # game/, tests/run_tests.gd, tools/godot.ps1, .github/workflows/game-tests.yml (jamais exécuté sur GitHub).
+  0-2-projet-de-jeu-et-tests-automatiques: review
+  # core/time/game_calendar.gd, services/clock.gd.
+  0-3-horloge: review
+  # core/time/work_schedule.gd, core/money/salary_engine.gd.
+  0-4-salaire-en-centimes: review
+  # core/money/payroll.gd.
+  0-5-journal-des-jours-et-rattrapage: review
+  # Dans payroll.gd. Les objets pour marquer un jour (calendrier) et pointer (chevalet) sont arrivés en 2.7 et 2.8.
+  0-6-jours-particuliers-et-pointage: review
+  # core/save/save_files.gd, core/save/migrations.gd, core/state/game_state.gd, services/game.gd.
+  0-7-sauvegarde-versionnee: review
+  # core/save/v1_import.gd, lu dans services/game.gd au premier lancement.
+  0-8-reprise-des-reglages-v1: review
+  epic-0-retrospective: optional
+
+  epic-1: in-progress
+  # core/money/denominations.gd (17 coupures, table de casse lue à l'envers pour les fusions).
+  1-1-coupures-et-table-de-fusion: review
+  # scenes/jar/jar_view.gd. 264 objets : 539 images/s sans synchronisation verticale sur le PC de Victor.
+  # Garde de mise au repos : 240 objets au repos en moins de 20 s. À mesurer sur un portable de bureau.
+  1-2-chute-collisions-et-repos: review
+  # core/money/jar.gd : trois tailles, jauge, fusion guidée par un profil. Seul le Pot est possédé
+  # pour l'instant ; Bocal et Bonbonne s'achèteront au catalogue (epic 10), --jar permet de les essayer.
+  1-3-tailles-de-bocal-et-fusion-paresseuse: review
+  # Repris le 2026-10-08 après l'essai de Victor (D28, D29) : fusion à la main en faisant glisser une
+  # coupure sur ses semblables, bocal qu'on saisit par le verre et qu'on secoue (sur le comptoir, en gros
+  # plan), mini-bocal remué quand on déplace le widget. Exercés par --gestures avec de vrais événements
+  # souris : secouer, fusionner à deux et à trois. Lancer, tapoter : écrits, pas exercés.
+  # L'effet coussin est un gonflement bref, pas un écrasement.
+  1-4-attraper-secouer-tapoter: review
+  # Bocal ouvert : le tas dépasse et des pièces roulent sur le comptoir. À 130 % : 3 pièces dehors ; à 171 % : 8.
+  1-5-debordement: review
+  # Le contenu (coupures) est retrouvé à l'identique ; les positions ne sont pas sauvegardées, tout retombe.
+  1-6-pluie-de-rattrapage: review
+  # scenes/widget/widget_view.gd, services/window_modes.gd. Format, position et opacité retenus.
+  # Glisser et molette : écrits, pas exercés par les essais automatiques. Clic droit : exercé depuis le
+  # 2026-10-08, y compris à travers le bocal du mini-bocal, qui l'avalait jusque-là (corrigé).
+  1-7-widget-trois-formats: review
+  # Mode discret : vérifié sur captures. Icône de la zone de notification : créée selon le moteur,
+  # pas vérifiée à l'œil ; pas de menu, un clic bascule maison / widget.
+  1-8-bascule-mode-discret-zone-de-notification: review
+  # scenes/jar/jar_sounds.gd : sons fabriqués par calcul, joués sans erreur, jamais écoutés.
+  1-9-tintements: review
   epic-1-retrospective: optional
-  
-  epic-2: backlog
-  2-1-window-controls-in-bocal: backlog
-  2-2-baking-ui-layering: backlog
-  2-3-baking-ui-refinement: backlog
+
+  # Tout l'epic 2 est en DÉCOR PROVISOIRE, dessiné par le code (scenes/home/home_decor.gd, home_prop.gd) :
+  # les illustrations le remplaceront sans toucher aux règles. Vérifié par captures et par un parcours
+  # scripté (--tour) ; aucun geste à la souris n'a été exercé, Victor n'a encore rien essayé.
+  epic-2: in-progress
+  # scenes/home/home.gd, home_layout.gd, scenes/shared/parallax_plane.gd. Quatre plans, 3840 × 1080,
+  # balayage par les bords de l'écran ou Q/D. Vérifié en 16:9, 16:10 et ultra-large. Balayage à la souris : pas exercé.
+  2-1-decor-en-plans-et-parallaxe: review
+  # home_prop.gd, scenes/closeups/closeup_layer.gd. Six gros plans ouverts et refermés par le parcours scripté.
+  # Survol, clic, clic droit et Échap : écrits, pas exercés.
+  2-2-objets-interactifs-et-gros-plans: review
+  # core/world/daylight.gd (11 tests), services/atmosphere.gd. Les cinq ambiances vues sur captures.
+  2-3-cinq-ambiances-de-lumiere: review
+  # core/world/weather.gd, scenes/closeups/barometer_closeup.gd. Relevé réel (Paris) et recherche de ville
+  # (Lyon) appelés pour de bon. Choix manuel : les cinq états vus. Repli hors ligne : écrit, pas essayé réseau coupé.
+  2-4-meteo-de-la-ville: review
+  # Jardin aux couleurs de la saison, neige en hiver. Les quatre vues sur captures. La rue viendra à l'epic 5.
+  2-5-quatre-saisons: review
+  # La même vignette sur le comptoir, en gros plan et dans le mini-bocal. Aller-retour vérifié,
+  # y compris un passage en widget pendant le gros plan (il égarait le bocal : corrigé).
+  2-6-bocal-sur-le-comptoir-et-gros-plan: review
+  # scenes/closeups/calendar_closeup.gd, ticket_closeup.gd. Le ticket dépasse de la caisse à l'heure de fin
+  # de journée, jusqu'à ce qu'il soit lu. Focus et fournées y valent 0 jusqu'à l'epic 3. Pas encore de livret (epic 5).
+  2-7-calendrier-mural-et-ticket-du-soir: review
+  # Fiche de paie (salaire, horaires, pointage ; core/text/entries.gd lit « 9 h 30 » et « 2 000,50 »),
+  # baromètre (ville, météo), cadre (format du widget), chevalet (pointage). Baromètre, cadre et chevalet
+  # ne sont pas dans la liste d'objets du GDD : à confirmer par Victor (décisions R-2.1 et R-2.2).
+  2-8-reglages-en-objets: review
   epic-2-retrospective: optional
 
   epic-3: backlog
-  3-1-widget-layout-stability: backlog
-  3-2-pomodoro-circular-ui: backlog
-  epic-3-retrospective: optional
-
   epic-4: backlog
-  4-1-manual-weather-control: backlog
-  4-2-global-parallax-toggle: backlog
-  4-3-widget-transparency-toggle: backlog
-  4-4-radio-station-manager: backlog
-  epic-4-retrospective: optional
+  epic-5: backlog
+  epic-6: backlog
+  epic-7: backlog
+  epic-8: backlog
+  epic-9: backlog
+  epic-10: backlog
+  epic-11: backlog

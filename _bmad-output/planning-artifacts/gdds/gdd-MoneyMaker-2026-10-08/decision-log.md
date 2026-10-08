@@ -1,0 +1,166 @@
+---
+title: 'MoneyMaker — Journal des décisions de la refonte'
+created: '2026-10-08'
+updated: '2026-10-08'
+---
+
+# Journal des décisions
+
+**Statuts :** `décidé` = arbitrage de Victor · `proposé` = choix de Claude, à valider · `repris` = intention du GDD v1 conservée.
+
+## 2026-10-08 — Arbitrages de Victor
+
+| # | Décision | Statut | Où dans le GDD |
+|---|---|---|---|
+| D1 | Le projet devient un jeu. Moteur : Godot (4.7.2 déjà installé chez Victor) | décidé (« peut être une bonne idée ») | Technical Specifications |
+| D2 | L'argent est en 2.5D avec parallaxe, dessiné dans le style de Chips | décidé | M2, Art Style |
+| D3 | Un épicier vend les ressources de pâtisserie ; on dialogue avec lui | décidé | M6, M7 |
+| D4 | On se déplace de chez soi jusqu'au magasin | décidé | M5 |
+| D5 | On dépense de l'argent pour les produits requis par les recettes | décidé | M6, Economy |
+| D6 | On élabore sa liste soi-même en lisant des livres de recettes | décidé | M4 |
+| D7 | Les recettes complétées sont visibles en vitrine et sur des étagères, déplaçables par glisser-déposer | décidé | M9 |
+| D8 | Destinataire : la compagne de Victor. Victor s'en sert aussi. Dépôt GitHub public | décidé | Target Audience, G3 |
+| D9 | Le salaire se dépense après avoir été mis sur un compte en banque | décidé | M3 |
+| D10 | « Une session focus = une fournée » | décidé | M8 |
+| D11 | Pas de pourboires : aucun profit autre que le salaire réel | décidé | R3, Out of Scope |
+| D12 | Pas de table de tri : trop laborieux | décidé | R1, Out of Scope |
+| D13 | Interface entièrement intra-diégétique | décidé | Pilier 4 |
+| D14 | Carnet de commandes avec un choix de quêtes parmi un pool | décidé | M10, R2 |
+| D15 | Chips a une routine ; il se pose sur la table pleine de farine quand vient la pause | décidé | M11 |
+| D16 | Visuels : Claude fournit des prompts Gemini, ou produit lui-même quand c'est possible ; Blender est disponible | décidé | `art-direction.md` |
+
+## 2026-10-08 — Propositions de Claude
+
+P1 à P8 ont reçu une réponse de Victor le jour même : voir la seconde série plus bas. P9 à P16 n'ont pas été contestées.
+
+| # | Proposition | Pourquoi | Hypothèse |
+|---|---|---|---|
+| P1 | Le dépôt se fait dans la rue, à une trappe de banque, et vide tout le bocal | Donne un deuxième but au trajet ; un seul geste (R1) | A1 |
+| P2 | Promenade en vue subjective, sans avatar | Un cycle de marche dessiné est l'asset le plus coûteux à obtenir de façon cohérente ; le brief d'origine ne montrait pas de personnage | A2 |
+| P3 | Paiement par chèque rempli automatiquement | Un geste ; cohérent avec un compte en banque et un village sans époque | A3 |
+| P4 | L'épicier s'appelle Honoré (saint Honoré est le patron des boulangers-pâtissiers) | Nom provisoire | A4 |
+| P5 | Mode strict par défaut pendant un focus | Le brief d'origine réservait le hub aux pauses | A5 |
+| P6 | Monnaie « maison » aux valeurs et couleurs de l'euro | Personnalise le cadeau ; évite les règles de reproduction des billets pour un dépôt public | A6 |
+| P7 | Radios en ligne non reprises en v1.0 | Godot ne lit pas nativement un flux radio ; à étudier | A7 |
+| P8 | Plantes et herbier reportés après la version cadeau | Déjà 12 epics avant la version cadeau | A8 |
+| P9 | Quatre piliers : Sérénité productive, Abondance tangible et honnête, Compagnonnage affectif, Tout est dans le décor | Fusion des piliers du brief et du GDD v1, plus D13 | — |
+| P10 | Trois tailles de bocal (jour, semaine, mois) ; le niveau est une jauge | Rend le remplissage lisible et garde le débordement promis par le brief | — |
+| P11 | Fusion paresseuse des coupures | Le bocal paraît toujours garni sans dépasser 240 objets | — |
+| P12 | Prix réels en euros, avec un coefficient global réglable | « Économie flat » du GDD v1 | — |
+| P13 | Affinité d'Honoré en quatre paliers, qui ne baisse jamais | Donne une raison de revenir sans pression | — |
+| P14 | Récompenses de quêtes non monétaires | Conséquence de D11 | — |
+| P15 | Contenu privé dans un pack hors dépôt | Conséquence de D8 | — |
+| P16 | Catalogue livré le lendemain, une commande à la fois | Anticipation ; étale les achats | — |
+
+## 2026-10-08 — Seconde série d'arbitrages de Victor
+
+Réponses aux huit hypothèses du premier jet.
+
+| # | Décision | Statut | Effet |
+|---|---|---|---|
+| D17 | Dépôt en un clic à un poste de banque, dans la rue | décidé | Confirme P1 ; « trappe » devient « guichet » ; un clic sur la sacoche à la maison, un clic sur le guichet dans la rue |
+| D18 | La rue est une seule image : ce qu'on voit depuis la pâtisserie en regardant en face, avec la banque et le magasin | décidé | Remplace P2 : plus de marche ni de défilement ; M5 réécrit ; story 5.1 réécrite ; « trajet automatique » supprimé |
+| D19 | Monnaie « maison », à condition qu'elle reste basée sur la valeur de l'euro | décidé | Confirme P6 : mêmes valeurs, montants en euros, seuls les motifs changent |
+| D20 | Plantes et herbier reportés après la version cadeau | décidé | Confirme P8 |
+| D21 | Paiement par chèque rempli automatiquement | décidé | Confirme P3 |
+| D22 | L'épicier est Honoré, tel que décrit | décidé | Confirme P4 |
+| D23 | Mode strict actif par défaut pendant un focus | décidé (après explication) | Confirme P5 ; le mode libre reste un réglage |
+| D24 | Pas de radios en ligne en v1.0 | accepté (« dommage mais ok ») | Confirme P7 ; l'étude 9.4 reste prévue |
+
+## 2026-10-08 — Règles précisées pendant l'epic 0
+
+| # | Règle | Pourquoi |
+|---|---|---|
+| R-0.1 | Un jour clos n'est jamais modifié. La journée en cours est recalculée avec les réglages du moment ; si le nouveau total est inférieur à ce qui est déjà tombé, rien n'est repris | Corriger une faute de frappe dans son salaire doit prendre effet tout de suite, sans jamais retirer d'argent |
+| R-0.2 | Une même date n'est jamais payée deux fois, même si l'horloge du PC recule | Remplace « rien n'est crédité tant que l'heure n'a pas dépassé la dernière connue », qui pouvait bloquer les gains après une erreur d'horloge |
+| R-0.3 | Les copies de secours de la sauvegarde tournent au lancement, pas à chaque écriture | Trois copies écrites à quelques secondes d'écart ne protègent de rien |
+| R-0.4 | Pointage manuel : 16 h comptées au plus par jour ; un pointage oublié s'arrête à minuit | Limite l'effet d'un oubli |
+
+## 2026-10-08 — Troisième série d'arbitrages de Victor
+
+| # | Décision | Statut | Effet |
+|---|---|---|---|
+| D25 | Retirer les installeurs `potato_rotato` du dépôt | décidé | Fait, avec le téléchargement interrompu du même dossier. L'historique git n'est pas purgé : la question est restée sans réponse |
+| D26 | Travailler sur une nouvelle branche | décidé | Branche `refonte-godot` ; rien n'est poussé |
+| D27 | Une application mobile (Android, iOS) avec widget d'écran d'accueil serait souhaitable, plus tard | noté | Ajouté aux reports d'après la v1.0. Corrige l'écart E4 : le jeu ne peut pas être lui-même un widget, mais un widget natif peut l'accompagner |
+
+## 2026-10-08 — Règles précisées pendant l'epic 1
+
+| # | Règle | Pourquoi |
+|---|---|---|
+| R-1.1 | La fusion à faire est choisie pour garder au bocal ses proportions (profil : pièces de 1 et 2 € nombreuses, petite monnaie, peu de billets), et non « la plus petite d'abord » | Mesuré : « la plus petite d'abord » donne un bocal de pièces toutes pareilles ; recomposer le bocal à chaque centime changerait jusqu'à 18 objets d'un coup |
+| R-1.2 | Dans la sauvegarde, le montant du bocal fait foi ; si le détail des coupures ne tombe pas juste, le bocal est recomposé pour ce montant | Un détail abîmé ne doit jamais créer ou détruire de l'argent |
+| R-1.3 | Le débordement est réel : le bocal est ouvert, le tas dépasse et des pièces roulent sur le comptoir, dans la limite de 24 objets en plus | Plus parlant qu'un compteur |
+| R-1.4 | En pastille et en bandeau, le bocal est en pause ; ce qui est gagné tombe au retour | Tenir la charge processeur du widget |
+| R-1.5 | Le jeu ne redessine l'écran que si quelque chose bouge | Mesuré : au repos, de 30 à 45 % d'un cœur à environ 1 % |
+| R-1.6 | Les illustrations de coupures sont détourées par le jeu, par leur forme | Gemini ne produit pas de fond transparent ; un détourage à la main serait une corvée |
+| R-1.7 | ~~Secouer le bocal se fait à la touche Espace, pas en faisant glisser le bocal~~ — remplacée par D29 et R-1.13 : le bocal se saisit par le verre | Le glisser sert déjà à attraper une pièce |
+
+## 2026-10-08 — Règles précisées pendant l'epic 2
+
+Victor n'a rien pu essayer ce jour-là : R-2.1 et R-2.2 ajoutent des objets à la maison et restent **à confirmer**.
+
+| # | Règle | Pourquoi |
+|---|---|---|
+| R-2.1 | Deux objets de réglage s'ajoutent à la liste du GDD : un **baromètre** au mur (ville et météo) et un **petit cadre** sur le bureau (format du widget) | « Tous les réglages sont des objets » (story 2.8), et le GDD ne disait pas lesquels pour ces deux-là |
+| R-2.2 | Un **chevalet** sur le bureau dit « Au travail » ou « Au repos ». Il suit l'horaire tout seul ; il ne se clique que si la fiche de paie dit « Je pointe moi-même » : un clic pour commencer la journée, un autre pour la finir | Le pointage manuel du GDD n'avait pas d'objet. En prime, le chevalet répond à « pourquoi rien ne tombe ? » (pause déjeuner, soir, week-end) |
+| R-2.3 | Passer de l'horaire au pointage en cours de journée garde le temps déjà compté ; revenir à l'horaire dépointe. Dans les deux sens, rien n'est repris | Même principe que R-0.1 |
+| R-2.4 | Sur la fiche de paie, une heure s'écrit « 9 h 30 » (ou 9h30, 09:30, 9) et une somme « 2000 » ou « 1834,50 ». Ce qui est ambigu (« 9,5 », « 2.000 ») est refusé et entouré de rouge, jamais deviné ; rien n'est enregistré tant que la feuille n'est pas claire | La première version demandait les heures en décimales (8,5 pour 8 h 30). Un salaire mal lu fausserait tout le jeu sans que cela se voie |
+| R-2.5 | La hauteur du soleil est calculée par le jeu à partir de la ville (du centre de la France si aucune n'est réglée) ; seule la météo vient du réseau | La lumière suit l'heure réelle même hors ligne, et sans rien demander à la joueuse |
+| R-2.6 | La nuit, les objets prennent la teinte de la pièce mais gardent une part de clarté : un peu pour ce qui se clique, la moitié pour le bocal et l'ardoise | Rester lisible sans que le bocal ait l'air allumé |
+| R-2.7 | Un jour marqué « congé » ou « férié » tombe aux heures habituelles, et le chevalet dit « Au travail » ces jours-là | Le GDD dit que ces jours restent payés ; le chevalet montre si l'argent tombe, pas si l'on est au bureau |
+| R-2.8 | La caisse montre le ticket de la journée à partir de l'heure de fin ; avant, elle montre celui de la dernière journée payée. Le ticket dépasse de la caisse tant qu'il n'a pas été lu | On peut relire son dernier ticket à tout moment |
+| R-2.9 | La maison remplit toujours la hauteur de la fenêtre : agrandie sur un écran 16:10 ou 4:3, plus large à l'image sur un écran ultra-large | Pas de bandes vides, quel que soit l'écran de la destinataire |
+| R-2.10 | À la maison, la touche Espace ne secoue le bocal qu'en gros plan (et en mini-bocal) | Sur le comptoir, le bocal n'est qu'un objet parmi d'autres ; Espace servira au minuteur (GDD) |
+
+## 2026-10-08 — Quatrième série d'arbitrages de Victor, après son premier essai de la maison
+
+« C'est pas mal, mais on a perdu la feature de fusion de l'argent pour en faire de plus gros billets, et j'aimerais pouvoir secouer le bocal entier. »
+
+| # | Décision | Statut | Effet |
+|---|---|---|---|
+| D28 | La fusion à la main revient, comme dans la v1 : on fait de plus gros billets en rapprochant des coupures | décidé | Modifie M2 du GDD. La fusion automatique (R-1.1) reste ; la main s'y ajoute |
+| D29 | On doit pouvoir secouer le bocal entier | décidé | Modifie M2 du GDD ; remplace R-1.7, qui réservait la secousse à la touche Espace |
+
+**Règles précisées pour D28 et D29** (écrites et essayées le même jour ; Victor ne les a pas encore eues en main) :
+
+| # | Règle | Pourquoi |
+|---|---|---|
+| R-1.8 | La coupure tenue fusionne avec une semblable **qu'elle touche**, et la nouvelle reste en main : en continuant de glisser, on enchaîne. Dans la v1, tout ce qui se touchait fusionnait ; ici, seule la main déclenche | Le bocal est une jauge : si tout fusionnait au contact, un Pot plein tiendrait en trois billets |
+| R-1.9 | Pour une fusion à trois (2 € + 2 € + 1 €), la troisième coupure est la plus proche dans le bocal ; elle vient d'elle-même. Sans elle, trois pareilles rendent la monnaie (3 × 2 c → 5 c + 1 c), comme dans la v1 | Réunir trois coupures précises sous la souris serait laborieux |
+| R-1.10 | Attraper n'est pas fusionner : il faut que la main ait parcouru un peu de chemin (0,35 unité, environ un centimètre de bocal) depuis la saisie ou la dernière fusion, et 0,28 s entre deux fusions | Sans cela, cliquer sur une pièce au milieu de ses semblables la ferait fusionner en chaîne avant qu'on ait bougé |
+| R-1.11 | **Le bocal ne défait jamais ce que la main a fait.** Il ne casse plus que ce qui vient de tomber (un rattrapage arrivé en gros billets). Après des fusions à la main, il compte moins d'objets que son niveau n'en demande ; les centimes suivants tombent sans fusionner jusqu'à ce que le compte y soit | Avant, le bocal aurait recassé les billets de la joueuse dans les trois secondes pour retrouver son compte. Conséquence assumée : la jauge dit « au plus tant d'objets », plus « exactement tant » |
+| R-1.12 | Enregistrer la fiche de paie sans que la capacité du bocal change ne recompose rien | Même raison : ne pas casser des billets faits à la main pour un salaire inchangé |
+| R-1.13 | Secouer : en gros plan, on saisit le bocal par une paroi de verre (le curseur change) ou par un vide à l'intérieur ; sur le comptoir, on le fait glisser, et un simple clic l'ouvre toujours ; en mini-bocal, déplacer le widget remue le contenu. Le bocal suit la main sur 0,8 unité de chaque côté et 1 vers le haut, à vitesse plafonnée (7 de côté, 4,5 vers le haut) | Mesuré sur un Pot plein : à vitesse presque double, une demi-seconde de secousse jetait 55 pièces sur 88 par-dessus bord |
+| R-1.14 | Une pièce tombée hors du bocal y retourne d'elle-même après 3 s au repos, une toutes les demi-secondes, tant que le tas reste sous 80 % de la hauteur. Au-delà, le bocal déborde pour de bon et elle reste sur le comptoir (R-1.3) | Rien de laborieux : on ne ramasse pas ses pièces une à une après avoir joué |
+| R-1.15 | Dans le mini-bocal, le clic droit, la molette et le double-clic traversent le bocal jusqu'au widget ; un appui dans le vide déplace la fenêtre ; seul un appui sur une pièce est pour le bocal | Corrige un défaut de l'epic 1 que personne n'avait pu voir : la vignette du bocal avalait ces gestes sur presque toute la surface du mini-bocal |
+
+## Repris du GDD v1
+
+| # | Intention v1 | Statut |
+|---|---|---|
+| V1 | Fournée ratée si le focus est abandonné : ingrédients perdus, miaulement d'encouragement | repris tel quel |
+| V2 | Ustensiles comme clés de progression des recettes | repris |
+| V3 | Objets éphémères d'une semaine (fleurs, bougie, café) | repris |
+| V4 | Ticket de caisse en fin de journée | repris |
+| V5 | Chips désigne les objets au premier lancement (seul tutoriel) | repris |
+| V6 | Chips rapporte des objets trouvés | repris |
+| V7 | Pas de prestige ni de remise à zéro | repris |
+| V8 | Sensation « coussin » des pièces | repris, en écrasement visuel à l'impact |
+| V9 | Livre de comptes à onglets (historique, statistiques, notes) | repris, réparti entre le livret et le bloc-notes |
+
+## Écarts assumés par rapport à la v1
+
+| # | v1 | Refonte | Raison |
+|---|---|---|---|
+| E1 | Fenêtres à volets, la rue n'est jamais montrée | On sort : la rue est une vue fixe en face de la pâtisserie | D4, D18 |
+| E2 | Argent utilisable le lendemain matin (rituel du rideau) | Argent utilisable après dépôt à la banque | D9 |
+| E3 | Aucun personnage visible | Honoré est visible dans sa boutique | D3 |
+| E4 | Widget Android en plateforme secondaire | Reporté après la v1.0 (voir D27) | Un jeu Godot ne peut pas être lui-même un widget d'écran d'accueil ; il faudra un widget natif à côté |
+| E5 | Radios FIP et Nova | Disques locaux en v1.0 | P7 |
+| E6 | Tables pour des clients dans le salon | Pas de clients | D11 : pas de vente |
+| E7 | « Rangement » des pièces à la main | Supprimé | D12 |
+
+## Correction
+
+- Le diagnostic du 8 octobre indiquait « 10+ recettes rédigées ». Le fichier `src/data/recipes.ts` en contient **6**. Corrigé dans `brainstorming-session-2026-10-08.md`.

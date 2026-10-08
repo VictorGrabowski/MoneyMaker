@@ -1,0 +1,51 @@
+# Workflow Status (BMGD)
+# Tracking progress for MoneyMaker
+
+generated: "2026-01-14"
+project: "MoneyMaker"
+project_type: "Electron App / Game"
+selected_track: "quickflow"
+field_type: "greenfield"
+workflow_path: "_bmad/bmgd/workflows/workflow-status/paths/quickflow-greenfield.yaml"
+
+workflow_status:
+  - phase: 0
+    name: "Pre-production"
+    required: true
+    workflows:
+      - id: "brainstorm-game"
+        status: "c:/Users/v.grabowski/OneDrive - Betclic Group/Documents/DEV/PROJETS/PERSO/MoneyMaker/_bmad-output/brainstorming-session-2026-01-14.md"
+        agent: "game-designer"
+        command: "/bmad:bmgd:workflows:brainstorm-game"
+  - phase: 1
+    name: "Prototype"
+    required: true
+    workflows:
+      - id: "quick-prototype"
+        status: "required"
+        agent: "game-solo-dev"
+        command: "/bmad:bmgd:workflows:quick-prototype"
+  - phase: 2
+    name: "Technical Architecture"
+    required: true
+    workflows:
+      - id: "game-architecture"
+        status: "c:/Users/v.grabowski/OneDrive - Betclic Group/Documents/DEV/PROJETS/PERSO/MoneyMaker/_bmad-output/game-architecture.md"
+        agent: "game-architect"
+        command: "/bmad:bmgd:workflows:game-architecture"
+  - phase: 3
+    name: "Development Planning"
+    required: true
+    workflows:
+      - id: "sprint-planning"
+        status: "c:/Users/v.grabowski/OneDrive - Betclic Group/Documents/DEV/PROJETS/PERSO/MoneyMaker/_bmad-output/implementation-artifacts/sprint-status.yaml"
+        agent: "game-scrum-master"
+        command: "/bmad:bmgd:workflows:sprint-planning"
+  - phase: 4
+    name: "Production"
+    required: true
+    workflows:
+      - id: "quick-dev"
+        status: "required"
+        agent: "game-solo-dev"
+        command: "/bmad:bmgd:workflows:quick-dev"
