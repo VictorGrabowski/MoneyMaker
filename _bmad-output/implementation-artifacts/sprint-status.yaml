@@ -27,8 +27,8 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   epic-0: in-progress
-  # En attente d'une décision de Victor : retirer les fichiers, et purger ou non l'historique git.
-  0-1-retirer-les-installeurs-du-depot: backlog
+  # Retirés le 2026-10-08 (deux installeurs et un téléchargement interrompu). L'historique git n'est pas purgé.
+  0-1-retirer-les-installeurs-du-depot: done
   # game/, tests/run_tests.gd, tools/godot.ps1, .github/workflows/game-tests.yml (jamais exécuté sur GitHub).
   0-2-projet-de-jeu-et-tests-automatiques: review
   # core/time/game_calendar.gd, services/clock.gd.

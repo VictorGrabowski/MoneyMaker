@@ -1,0 +1,8 @@
+# Godot 4
+.godot/
+*.translation
+export_presets.cfg
+/build/
+
+# Contenu privé (mots doux, secrets) : jamais dans le dépôt public
+/content_private/
