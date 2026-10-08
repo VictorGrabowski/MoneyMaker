@@ -1,9 +1,13 @@
-## Dessine des coupures provisoires (« monnaie maison ») en attendant les illustrations.
-## Chaque face est rendue une fois dans une vignette, puis convertie en texture.
+## Les faces des coupures.
+## Prend l'illustration quand elle existe dans assets/art/money/ ; sinon dessine une face provisoire
+## (encre et lavis, par shader). Déposer une image suffit donc à remplacer une face provisoire.
 extends Node
 
 const Denominations := preload("res://core/money/denominations.gd")
-const FACE_SHADER := preload("res://scenes/prototype/money_face.gdshader")
+const FACE_SHADER := preload("res://scenes/jar/money_face.gdshader")
+
+const ART_FOLDER := "res://assets/art/money"
+const ART_EXTENSIONS: Array[String] = [".webp", ".png"]
 
 const INK := Color(0.227, 0.149, 0.094)
 const COPPER := Color(0.753, 0.478, 0.271)
@@ -36,6 +40,9 @@ const BILL_COLOR: Dictionary = {
 const COIN_TEXTURE_SIZE := Vector2i(256, 256)
 const BILL_TEXTURE_SIZE := Vector2i(512, 256)
 
+## Valeurs dont la face vient d'une illustration (les autres sont provisoires).
+var illustrated: Array[int] = []
+
 var _font: SystemFont
 
 
@@ -43,6 +50,16 @@ func _init() -> void:
 	_font = SystemFont.new()
 	_font.font_names = PackedStringArray(["Segoe Print", "Ink Free", "Comic Sans MS"])
 	_font.font_weight = 700
+
+
+## Nom de fichier attendu pour une coupure, sans extension : coin_100_face (1 €, en centimes),
+## bill_20_face (20 €, en euros), ingot_face, gem_face.
+static func art_name(value: int) -> String:
+	if Denominations.is_coin(value):
+		return "coin_%d_face" % value
+	if Denominations.is_bill(value):
+		return "bill_%d_face" % (value / 100)
+	return "ingot_face" if value == 100000 else "gem_face"
 
 
 ## Couleur de la tranche d'une coupure.
@@ -53,23 +70,30 @@ static func edge_color(value: int) -> Color:
 	if BILL_COLOR.has(value):
 		var paper: Color = BILL_COLOR[value]
 		return paper.lightened(0.25)
-	return GOLD.darkened(0.2)
+	return GOLD.darkened(0.2) if value == 100000 else Color(0.80, 0.55, 0.30)
 
 
-## Renvoie { valeur: Texture2D } pour les pièces et les billets.
-func paint_all() -> Dictionary:
+## Renvoie { valeur: Texture2D } pour toutes les pièces et tous les billets.
+func load_all() -> Dictionary:
+	var textures := {}
 	var jobs: Array = []
 	var index := 0
+	illustrated.clear()
 	for value in Denominations.VALUES:
 		if value > Denominations.LARGEST_BILL:
 			continue
-		var viewport := _build_face(value, index)
-		add_child(viewport)
-		jobs.append([value, viewport])
+		var art := _load_art(value)
+		if art != null:
+			textures[value] = art
+			illustrated.append(value)
+		else:
+			var viewport := _build_face(value, index)
+			add_child(viewport)
+			jobs.append([value, viewport])
 		index += 1
-	await RenderingServer.frame_post_draw
-	await RenderingServer.frame_post_draw
-	var textures := {}
+	if not jobs.is_empty():
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
 	for job in jobs:
 		var viewport: SubViewport = job[1]
 		var image := viewport.get_texture().get_image()
@@ -77,6 +101,21 @@ func paint_all() -> Dictionary:
 		textures[job[0]] = ImageTexture.create_from_image(image)
 		viewport.queue_free()
 	return textures
+
+
+## L'illustration d'une coupure, ou null. Accepte une image importée par l'éditeur comme un fichier
+## simplement déposé dans le dossier (pas encore importé).
+func _load_art(value: int) -> Texture2D:
+	for extension in ART_EXTENSIONS:
+		var path := "%s/%s%s" % [ART_FOLDER, art_name(value), extension]
+		if ResourceLoader.exists(path):
+			return load(path)
+		if FileAccess.file_exists(path):
+			var image := Image.load_from_file(ProjectSettings.globalize_path(path))
+			if image != null and not image.is_empty():
+				image.generate_mipmaps()
+				return ImageTexture.create_from_image(image)
+	return null
 
 
 func _build_face(value: int, index: int) -> SubViewport:

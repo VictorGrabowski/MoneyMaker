@@ -1,8 +1,8 @@
 ## Le verre du bocal, dessiné en 2D par-dessus (face avant) ou par-dessous (fond) les pièces.
-## Suit la projection de la caméra du bocal, donc se décale avec la parallaxe.
+## Suit la projection de la caméra du bocal : il se décale avec la parallaxe et change avec la taille.
 extends Node2D
 
-const JarView := preload("res://scenes/prototype/jar_view.gd")
+const JarView := preload("res://scenes/jar/jar_view.gd")
 
 const GLASS_LINE := Color(1.0, 1.0, 1.0, 0.55)
 const GLASS_HALO := Color(0.78, 0.90, 0.93, 0.22)
@@ -19,7 +19,7 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	if jar == null:
+	if jar == null or not jar.is_inside_tree():
 		return
 	var face := jar.jar_face_points(-1.0 if is_back else 1.0)
 	var top_left := face[0]
@@ -28,6 +28,8 @@ func _draw() -> void:
 	var bottom_left := face[3]
 	var width := top_right.x - top_left.x
 	var height := bottom_left.y - top_left.y
+	# Les traits gardent la même finesse quelle que soit la taille du bocal à l'écran.
+	var line := clampf(width / 100.0, 2.0, 6.0)
 
 	if is_back:
 		draw_colored_polygon(face, GLASS_TINT)
@@ -42,8 +44,8 @@ func _draw() -> void:
 
 	# Paroi : un U ouvert en haut, aux angles arrondis.
 	var outline := _u_path(top_left, top_right, bottom_right, bottom_left, 0.07 * width)
-	draw_polyline(outline, GLASS_HALO, 16.0, true)
-	draw_polyline(outline, GLASS_LINE, 5.0, true)
+	draw_polyline(outline, GLASS_HALO, line * 3.0, true)
+	draw_polyline(outline, GLASS_LINE, line, true)
 
 	# Col : une ellipse aplatie.
 	var rim := PackedVector2Array()
@@ -51,8 +53,8 @@ func _draw() -> void:
 	for i in 49:
 		var angle := TAU * i / 48.0
 		rim.append(center + Vector2(cos(angle) * width * 0.5, sin(angle) * width * 0.032))
-	draw_polyline(rim, GLASS_HALO, 12.0, true)
-	draw_polyline(rim, GLASS_LINE, 4.0, true)
+	draw_polyline(rim, GLASS_HALO, line * 2.4, true)
+	draw_polyline(rim, GLASS_LINE, line * 0.8, true)
 
 	# Reflets.
 	_streak(top_left + Vector2(0.09 * width, 0.10 * height), top_left + Vector2(0.09 * width, 0.62 * height), 0.035 * width)

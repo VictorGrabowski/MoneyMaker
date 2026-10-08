@@ -67,6 +67,35 @@ func set_pay(net_monthly_cents: int, schedule_values: Dictionary) -> void:
 	state.payroll.apply_schedule_dict(schedule_values)
 	Events.settings_changed.emit()
 	_on_second(Clock.now_local())
+	# Un bocal plein ne vaut plus la même somme : son niveau change, donc son nombre d'objets.
+	var ops := state.rebalance_jar()
+	if not ops.is_empty():
+		Events.jar_changed.emit(ops)
+	request_save()
+
+
+## Bascule le mode discret (montants masqués).
+func set_discreet(enabled: bool) -> void:
+	if state.discreet == enabled:
+		return
+	state.discreet = enabled
+	Events.preferences_changed.emit()
+	request_save()
+
+
+func set_sound_enabled(enabled: bool) -> void:
+	if state.sound_enabled == enabled:
+		return
+	state.sound_enabled = enabled
+	Events.preferences_changed.emit()
+	request_save()
+
+
+## Retient le format, la position et l'opacité du widget.
+func remember_widget(format: String, position: Vector2i, opacity: float) -> void:
+	state.set_widget_format(format)
+	state.set_widget_position(position)
+	state.set_widget_opacity(opacity)
 	request_save()
 
 
@@ -92,6 +121,7 @@ func _on_second(now_local: int) -> void:
 	if earned > 0:
 		_dirty = true
 		Events.cents_earned.emit(earned)
+		Events.jar_changed.emit(state.last_jar_ops)
 
 
 func _process(delta: float) -> void:

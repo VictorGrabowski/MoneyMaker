@@ -1,40 +1,41 @@
-## Écran de travail de la refonte : le bocal 2.5D, l'ardoise du jour, la fiche de paie provisoire
-## et la bascule en widget. Le décor est un bouche-trou.
+## Écran de travail de la refonte, en attendant la maison (epic 2) : le bocal, l'ardoise du jour,
+## la fiche de paie provisoire et la bascule en widget. Le décor est un bouche-trou.
 ##
 ## Arguments (après `--`) :
 ##   --shot=<fichier.png>   enregistre une capture, écrit un rapport puis quitte
 ##   --shot-delay=<s>       délai avant la capture (6 s par défaut)
 ##   --widget               démarre en widget
 ## Démonstration, sans toucher à la sauvegarde :
-##   --fill=<centimes>      montant affiché dans le bocal
-##   --bench=<objets>       remplit avec ce nombre d'objets et mesure les images par seconde
+##   --fill=<centimes>      montant placé dans le bocal
+##   --bench=<objets>       fait tomber ce nombre d'objets et mesure les images par seconde
 ## Essais (version de développement uniquement) :
 ##   --profile=<nom>        sauvegarde à part, dans user://save_<nom>
 ##   --now=<AAAA-MM-JJTHH:MM:SS>  fait comme s'il était cette heure-là
 ##   --net=<centimes>       règle le net mensuel si rien n'est encore réglé
+##   --jar=<pot|bocal|bonbonne>   change de bocal
 extends Node2D
 
 const Denominations := preload("res://core/money/denominations.gd")
 const JarComposition := preload("res://core/money/jar_composition.gd")
+const Jar := preload("res://core/money/jar.gd")
 const SalaryEngine := preload("res://core/money/salary_engine.gd")
 const WorkSchedule := preload("res://core/time/work_schedule.gd")
-const MoneyPainter := preload("res://scenes/prototype/money_painter.gd")
-const JarView := preload("res://scenes/prototype/jar_view.gd")
-const JarGlass := preload("res://scenes/prototype/jar_glass.gd")
-const WidgetView := preload("res://scenes/prototype/widget_view.gd")
-const PaySheet := preload("res://scenes/prototype/pay_sheet.gd")
+const MoneyFaces := preload("res://scenes/jar/money_faces.gd")
+const JarView := preload("res://scenes/jar/jar_view.gd")
+const JarGlass := preload("res://scenes/jar/jar_glass.gd")
+const WidgetView := preload("res://scenes/widget/widget_view.gd")
+const PaySheet := preload("res://scenes/workbench/pay_sheet.gd")
 
-## Pot : plein à ras bord pour un jour de salaire, 90 objets.
-const POT_FULL_OBJECTS := 90
-const MIN_OBJECTS := 12
+## Salaire de la démonstration : 2 000 € net, 35 h par semaine.
 const DEMO_NET_CENTS := 200000
+const DEMO_DAY_CENTS := 9230
+const DEMO_WEEK_CENTS := 46150
 const POUR_CENTS := 500
 
 const DESIGN_SIZE := Vector2i(1920, 1080)
 const WIDGET_SIZE := Vector2i(320, 96)
-const JAR_RECT := Rect2(610, 110, 700, 900)
-const SLATE_POSITION := Vector2(110, 300)
-const COUNTER_TOP := 878.0
+const JAR_RECT := Rect2(380, 110, 1160, 900)
+const SLATE_POSITION := Vector2(110, 250)
 
 const INK := Color(0.227, 0.149, 0.094)
 const CREAM := Color(0.965, 0.914, 0.824)
@@ -49,13 +50,16 @@ const HELP_DEMO := "Démonstration   ·   Glisser : attraper une pièce   ·   E
 var _args: Dictionary = {}
 ## Vrai : montants de démonstration, la sauvegarde n'est ni lue ni écrite.
 var _is_demo := false
-var _demo_cents := 0
+var _demo_jar: Jar
 var _in_widget := false
 var _window_before_widget: Dictionary = {}
 
 var _home: Node2D
 var _backdrop: Node2D
+var _counter: ColorRect
+var _counter_edge: ColorRect
 var _jar: JarView
+var _back_glass: JarGlass
 var _slate: Panel
 var _slate_amount: Label
 var _slate_jar: Label
@@ -73,13 +77,23 @@ func _ready() -> void:
 			_args[pair[0]] = pair[1] if pair.size() > 1 else ""
 	_is_demo = _args.has("fill") or _args.has("bench")
 
-	if not _is_demo:
+	if _is_demo:
+		_demo_jar = Jar.new()
+		_demo_jar.day_pay_cents = DEMO_DAY_CENTS
+		_demo_jar.week_pay_cents = DEMO_WEEK_CENTS
+		_demo_jar.month_pay_cents = DEMO_NET_CENTS
+		if Jar.SIZES.has(_args.get("jar", "")):
+			_demo_jar.size = _args["jar"]
+		_demo_jar.set_cents(int(_args.get("fill", "0")))
+	else:
 		var testing := OS.is_debug_build()
 		if testing and _args.has("now"):
 			Clock.pretend_it_is(_args["now"])
 		Game.boot(_args.get("profile", "") if testing else "")
 		if testing and _args.has("net") and not Game.state.payroll.is_configured():
 			Game.set_pay(int(_args["net"]), {})
+		if testing and Jar.SIZES.has(_args.get("jar", "")):
+			Game.state.jar.set_size(_args["jar"])
 
 	_hand_font = SystemFont.new()
 	_hand_font.font_names = PackedStringArray(["Segoe Print", "Ink Free", "Comic Sans MS"])
@@ -90,17 +104,18 @@ func _ready() -> void:
 	_build_backdrop()
 	_build_slate()
 
-	var painter := MoneyPainter.new()
-	add_child(painter)
-	var textures: Dictionary = await painter.paint_all()
-	painter.queue_free()
-	_build_jar(textures)
+	var faces := MoneyFaces.new()
+	add_child(faces)
+	var textures: Dictionary = await faces.load_all()
+	var illustrated := faces.illustrated.duplicate()
+	faces.queue_free()
+	_build_jar(textures, illustrated)
 	_build_widget()
 	_build_pay_sheet()
 	_fill_at_start()
 
 	if not _is_demo:
-		Events.cents_earned.connect(_on_cents_earned)
+		Events.jar_changed.connect(_on_jar_changed)
 		Events.settings_changed.connect(_refresh_amounts)
 		Clock.second_ticked.connect(func(_now: int) -> void: _refresh_amounts())
 		if not Game.state.payroll.is_configured():
@@ -119,6 +134,7 @@ func _process(delta: float) -> void:
 	_backdrop.position = _backdrop.position.lerp(-mouse * 14.0, minf(1.0, delta * 6.0))
 	_slate.position = SLATE_POSITION - mouse * 7.0
 	_jar.parallax = mouse
+	_align_counter()
 	if _fps_label.visible:
 		_fps_label.text = "%d images/s · %d objets · %d en mouvement" % [
 			Engine.get_frames_per_second(), _jar.object_count(), _jar.awake_count()]
@@ -139,10 +155,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not _is_demo and not _in_widget:
 				_show_pay_sheet(not _pay_sheet.visible)
 		KEY_KP_ADD, KEY_PLUS, KEY_EQUAL:
-			if _is_demo:
-				_demo_cents += POUR_CENTS
-				_jar.queue_values(JarComposition.to_values(JarComposition.greedy(POUR_CENTS)))
-				_refresh_amounts()
+			if _is_demo and not _args.has("bench"):
+				_on_jar_changed(_demo_jar.add_cents(POUR_CENTS))
 		KEY_ESCAPE:
 			if _pay_sheet.visible:
 				_show_pay_sheet(false)
@@ -152,57 +166,44 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # --- Montants ---
 
-func _jar_cents() -> int:
-	return _demo_cents if _is_demo else Game.state.jar_cents
+func _jar_model() -> Jar:
+	return _demo_jar if _is_demo else Game.state.jar
 
 
 func _today_cents() -> int:
-	return _demo_cents if _is_demo else Game.state.payroll.earned_today()
+	return _demo_jar.cents() if _is_demo else Game.state.payroll.earned_today()
 
 
-func _schedule() -> WorkSchedule:
-	return WorkSchedule.new() if _is_demo else Game.state.payroll.schedule
-
-
-func _net_cents() -> int:
-	return DEMO_NET_CENTS if _is_demo else Game.state.payroll.net_monthly_cents
-
-
-## Nombre d'objets à montrer pour ce montant : le niveau du Pot suit la part d'une journée de salaire.
-func _object_target(cents: int) -> int:
-	var schedule := _schedule()
-	var day_cents: int = SalaryEngine.earned(schedule.worked_seconds_at(86400), _net_cents(), schedule.monthly_seconds())["cents"]
-	if day_cents <= 0:
-		return MIN_OBJECTS
-	var fullness := clampf(float(cents) / float(day_cents), 0.0, 1.0)
-	return clampi(roundi(fullness * POT_FULL_OBJECTS), MIN_OBJECTS, POT_FULL_OBJECTS)
+func _hourly_cents() -> int:
+	if _is_demo:
+		return SalaryEngine.hourly_cents(WorkSchedule.new(), DEMO_NET_CENTS)
+	return Game.state.payroll.hourly_cents()
 
 
 func _fill_at_start() -> void:
-	var target := 0
 	if _args.has("bench"):
-		target = int(_args["bench"])
-		_demo_cents = target * 103
-	elif _args.has("fill"):
-		_demo_cents = int(_args["fill"])
-	var cents := _jar_cents()
-	if target == 0:
-		target = _object_target(cents)
-	if cents > 0:
-		_jar.queue_values(JarComposition.to_values(JarComposition.compose(cents, target)))
+		var objects := int(_args["bench"])
+		_jar.show_composition(JarComposition.compose(objects * 103, objects))
+	else:
+		_jar.show_composition(_jar_model().composition)
 	_refresh_amounts()
 
 
-func _on_cents_earned(cents: int) -> void:
-	_jar.queue_values(JarComposition.to_values(JarComposition.greedy(cents)))
+## Le modèle du bocal a changé : la scène joue ses opérations, puis on vérifie qu'elle montre
+## bien le même contenu que lui.
+func _on_jar_changed(ops: Array[Dictionary]) -> void:
+	_jar.apply_ops(ops)
+	if _jar.content() != _jar_model().composition:
+		push_warning("Le bocal affiché ne correspond plus au modèle : il est refait.")
+		_jar.show_composition(_jar_model().composition)
 	_refresh_amounts()
 
 
 func _refresh_amounts() -> void:
 	var today := Denominations.format_cents(_today_cents())
 	_slate_amount.text = today
-	_slate_jar.text = "Dans le bocal : %s" % Denominations.format_cents(_jar_cents())
-	_slate_rate.text = "%s de l'heure" % Denominations.format_cents(SalaryEngine.hourly_cents(_schedule(), _net_cents()))
+	_slate_jar.text = "Dans le bocal : %s" % Denominations.format_cents(_jar_model().cents())
+	_slate_rate.text = "%s de l'heure" % Denominations.format_cents(_hourly_cents())
 	_widget.amount_text = today
 	_widget.ring_progress = 0.62
 
@@ -256,18 +257,25 @@ func _build_backdrop() -> void:
 	window_glow.modulate = Color(1.0, 1.0, 1.0, 0.55)
 	_backdrop.add_child(window_glow)
 
-	var counter := ColorRect.new()
-	counter.color = WALNUT
-	counter.position = Vector2(-160, COUNTER_TOP)
-	counter.size = Vector2(DESIGN_SIZE.x + 320, 400)
-	counter.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_backdrop.add_child(counter)
-	var counter_edge := ColorRect.new()
-	counter_edge.color = WALNUT.lightened(0.22)
-	counter_edge.position = Vector2(-160, COUNTER_TOP)
-	counter_edge.size = Vector2(DESIGN_SIZE.x + 320, 14)
-	counter_edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_backdrop.add_child(counter_edge)
+	_counter = ColorRect.new()
+	_counter.color = WALNUT
+	_counter.size = Vector2(DESIGN_SIZE.x + 320, 600)
+	_counter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.add_child(_counter)
+	_counter_edge = ColorRect.new()
+	_counter_edge.color = WALNUT.lightened(0.22)
+	_counter_edge.size = Vector2(DESIGN_SIZE.x + 320, 14)
+	_counter_edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backdrop.add_child(_counter_edge)
+	_counter.position = Vector2(-160, 880)
+	_counter_edge.position = _counter.position
+
+
+## Pose le bord du comptoir dessiné à la hauteur du comptoir sur lequel roulent les pièces.
+func _align_counter() -> void:
+	var line := _jar.position.y + _jar.counter_line() - _backdrop.position.y
+	_counter.position.y = line
+	_counter_edge.position.y = line
 
 
 func _build_slate() -> void:
@@ -321,22 +329,24 @@ func _chalk_label(text: String, font_size: int, at: Vector2) -> Label:
 	return label
 
 
-func _build_jar(textures: Dictionary) -> void:
-	var back_glass := JarGlass.new()
-	back_glass.is_back = true
-	back_glass.position = JAR_RECT.position
-	_home.add_child(back_glass)
+func _build_jar(textures: Dictionary, illustrated: Array[int]) -> void:
+	_back_glass = JarGlass.new()
+	_back_glass.is_back = true
+	_back_glass.position = JAR_RECT.position
+	_home.add_child(_back_glass)
 
 	_jar = JarView.new()
-	_jar.setup(textures)
+	_jar.setup(textures, illustrated, _jar_model().size)
 	_jar.position = JAR_RECT.position
 	_jar.size = JAR_RECT.size
 	_home.add_child(_jar)
-	back_glass.jar = _jar
+	_back_glass.jar = _jar
 
 	var front_glass := JarGlass.new()
 	front_glass.jar = _jar
 	_jar.add_child(front_glass)
+	# L'ardoise passe devant le bocal, dont la vignette couvre presque tout l'écran.
+	_home.move_child(_slate, -1)
 
 
 func _build_widget() -> void:
@@ -381,7 +391,8 @@ func _set_widget_mode(enabled: bool) -> void:
 	_in_widget = enabled
 	_home.visible = not enabled
 	_widget.visible = enabled
-	_jar.set_rendering(not enabled)
+	# En bandeau, le bocal est en pause : ce qui est gagné attend et tombera au retour.
+	_jar.set_simulating(not enabled)
 	if enabled:
 		_show_pay_sheet(false)
 		_window_before_widget = {"mode": window.mode, "size": window.size, "position": window.position}
@@ -415,26 +426,38 @@ func _set_widget_mode(enabled: bool) -> void:
 func _capture_and_quit() -> void:
 	var delay := float(_args.get("shot-delay", "6"))
 	await get_tree().create_timer(delay).timeout
+	# --pour=<n> : en démonstration, verse n fois 5 € pour exercer chutes et fusions.
+	if _is_demo and _args.has("pour"):
+		for _i in int(_args["pour"]):
+			_on_jar_changed(_demo_jar.add_cents(POUR_CENTS))
+			await get_tree().create_timer(0.5).timeout
+		await get_tree().create_timer(5.0).timeout
 
+	var model := _jar_model()
 	var report := {
 		"objets": _jar.object_count(),
 		"en_mouvement": _jar.awake_count(),
 		"en_attente": _jar.queued_count(),
-		"bocal": Denominations.format_cents(_jar_cents()),
-		"aujourd_hui": Denominations.format_cents(_today_cents()),
+		"hors_bocal": _jar.outside_count(),
+		"niveau_du_tas": snappedf(_jar.pile_level(), 0.01),
 		"vitesse_max": str(_jar.max_speeds()),
+		"aujourd_hui": Denominations.format_cents(_today_cents()),
 	}
+	if not _args.has("bench"):
+		report["bocal"] = "%s (%s)" % [Denominations.format_cents(model.cents()), model.size]
+		report["cible"] = model.target_count()
+		report["niveau"] = snappedf(model.fullness(), 0.01)
+		report["conforme_au_modele"] = _jar.content() == model.composition
+		var kinds: Array[String] = []
+		for value in Denominations.VALUES:
+			if model.composition.get(value, 0) > 0:
+				kinds.append("%s×%d" % [Denominations.label(value).replace(" ", ""), model.composition[value]])
+		report["contenu"] = " ".join(kinds)
 	if not _is_demo:
 		var payroll := Game.state.payroll
-		var days := payroll.ledger.keys()
-		days.sort()
-		var last_lines := {}
-		for day in days.slice(maxi(0, days.size() - 4)):
-			last_lines[day] = "%s, %s" % [Denominations.format_cents(payroll.ledger[day]["cents"]), payroll.ledger[day]["kind"]]
 		report["depart"] = Game.started_from
 		report["jour_en_cours"] = payroll.open_day
 		report["jours_clos"] = payroll.ledger.size()
-		report["derniers_jours"] = last_lines
 		report["cumul"] = Denominations.format_cents(payroll.total_earned_cents)
 	if _args.has("bench"):
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
