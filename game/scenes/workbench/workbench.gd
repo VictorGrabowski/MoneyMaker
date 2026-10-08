@@ -127,6 +127,10 @@ func _ready() -> void:
 	add_child(_sounds)
 	_jar.object_landed.connect(_on_object_landed)
 	_jar.objects_changed.connect(func(_output: int) -> void: _sounds.play_merge())
+	_jar.merged_by_hand.connect(_on_merged_by_hand)
+	_widget.window_moved.connect(func(pixels: Vector2) -> void:
+		if _jar.get_parent() == _widget:
+			_jar.sway(pixels))
 
 	WindowModes.setup_tray(_tray_icon(textures[100]))
 	WindowModes.changed.connect(_on_window_mode_changed)
@@ -258,6 +262,15 @@ func _on_jar_changed(ops: Array[Dictionary]) -> void:
 	_jar.apply_ops(ops)
 	if _jar.content() != _jar_model().composition:
 		push_warning("Le bocal affiché ne correspond plus au modèle : il est refait.")
+		_jar.show_composition(_jar_model().composition)
+	_refresh_amounts()
+
+
+## La joueuse vient de fusionner des coupures à la main : le modèle en prend acte.
+func _on_merged_by_hand(inputs: Array[int], outputs: Array[int]) -> void:
+	var accepted := _demo_jar.exchange(inputs, outputs) if _is_demo else Game.exchange_in_jar(inputs, outputs)
+	if not accepted:
+		push_warning("Fusion à la main refusée par le modèle : le bocal affiché est refait.")
 		_jar.show_composition(_jar_model().composition)
 	_refresh_amounts()
 
@@ -490,6 +503,8 @@ func _on_window_mode_changed() -> void:
 		_jar.position = JAR_RECT.position
 		_jar.size = JAR_RECT.size
 	_jar.compact = mini
+	# Dans le widget, ce que le bocal ne prend pas (clic droit, molette, appui dans le vide) lui revient.
+	_jar.mouse_filter = Control.MOUSE_FILTER_PASS if mini else Control.MOUSE_FILTER_STOP
 	# En pastille et en bandeau, le bocal est en pause : ce qui est gagné attend et tombera au retour.
 	_jar.set_simulating(not in_widget or mini)
 

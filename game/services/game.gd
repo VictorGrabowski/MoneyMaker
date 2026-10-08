@@ -64,6 +64,7 @@ func boot(profile: String = "") -> void:
 ## les jours clos ne bougent pas.
 ## `schedule_values` peut aussi porter "manual_clocking" (pointage à la main plutôt qu'à l'horaire).
 func set_pay(net_monthly_cents: int, schedule_values: Dictionary) -> void:
+	var capacity_before := state.jar.capacity_cents()
 	state.payroll.net_monthly_cents = maxi(0, net_monthly_cents)
 	state.payroll.apply_schedule_dict(schedule_values)
 	if schedule_values.has("manual_clocking"):
@@ -71,10 +72,22 @@ func set_pay(net_monthly_cents: int, schedule_values: Dictionary) -> void:
 	Events.settings_changed.emit()
 	_on_second(Clock.now_local())
 	# Un bocal plein ne vaut plus la même somme : son niveau change, donc son nombre d'objets.
-	var ops := state.rebalance_jar()
-	if not ops.is_empty():
-		Events.jar_changed.emit(ops)
+	# À capacité égale, rien n'est refait : ce que la joueuse a fusionné à la main reste tel quel.
+	if state.jar.capacity_cents() != capacity_before:
+		var ops := state.rebalance_jar()
+		if not ops.is_empty():
+			Events.jar_changed.emit(ops)
 	request_save()
+
+
+## La joueuse a fusionné des coupures du bocal à la main : `inputs` deviennent `outputs`.
+## La scène a déjà joué la fusion ; faux si le bocal ne contient pas ces coupures (la scène et
+## l'état ne disent plus la même chose : à elle de se refaire).
+func exchange_in_jar(inputs: Array, outputs: Array) -> bool:
+	if not state.jar.exchange(inputs, outputs):
+		return false
+	request_save()
+	return true
 
 
 ## Pointage manuel : commence (true) ou termine (false) la journée. Sans effet à l'horaire.

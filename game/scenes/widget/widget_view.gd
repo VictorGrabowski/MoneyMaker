@@ -7,6 +7,9 @@ extends Control
 
 const GameState := preload("res://core/state/game_state.gd")
 
+## La fenêtre vient d'être déplacée de `pixels` : le mini-bocal s'en ressent.
+signal window_moved(pixels: Vector2)
+
 const INK := Color(0.227, 0.149, 0.094)
 const PAPER := Color(0.965, 0.914, 0.824)
 const CRUST := Color(0.851, 0.565, 0.184)
@@ -151,4 +154,8 @@ func _gui_input(event: InputEvent) -> void:
 				if button.pressed:
 					WindowModes.nudge_opacity(-1)
 	elif event is InputEventMouseMotion and _dragging:
+		var before := get_window().position
 		WindowModes.move_widget_to(DisplayServer.mouse_get_position() - _drag_offset)
+		var moved := Vector2(get_window().position - before)
+		if moved != Vector2.ZERO:
+			window_moved.emit(moved)

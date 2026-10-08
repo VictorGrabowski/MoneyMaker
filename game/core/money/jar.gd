@@ -1,10 +1,15 @@
 ## Le bocal : ce qu'il contient, sa taille et son niveau.
 ##
 ## Le bocal est une jauge : plein à ras bord, il vaut un jour (Pot), une semaine (Bocal) ou un mois
-## (Bonbonne) de salaire. Le nombre d'objets suit ce niveau ; pour le tenir, les coupures fusionnent
-## (ou se cassent) une à une, en gardant à peu près les proportions de PROFILE.
+## (Bonbonne) de salaire. Le nombre d'objets ne dépasse pas ce niveau ; pour le tenir, les coupures
+## fusionnent une à une, en gardant à peu près les proportions de PROFILE, et ce qui tombe en
+## grosses coupures (un rattrapage) se casse pour l'atteindre.
 ##
-## Chaque changement est décrit par une liste d'opérations que la scène n'a plus qu'à jouer.
+## La joueuse peut aussi fusionner à la main (exchange) : le bocal compte alors moins d'objets que
+## son niveau n'en demande, et il ne casse rien pour compenser. Les centimes suivants tombent sans
+## fusionner jusqu'à ce que le compte y soit de nouveau.
+##
+## Chaque changement automatique est décrit par une liste d'opérations que la scène n'a plus qu'à jouer.
 extends RefCounted
 
 const Denominations := preload("res://core/money/denominations.gd")
@@ -93,15 +98,54 @@ func add_cents(amount: int) -> Array[Dictionary]:
 	if amount <= 0:
 		return ops
 	var dropped := JarComposition.to_values(JarComposition.greedy(amount))
+	var fresh := {}
 	for value in dropped:
 		composition[value] = composition.get(value, 0) + 1
+		fresh[value] = fresh.get(value, 0) + 1
 	ops.append({"op": OP_DROP, "values": dropped})
-	ops.append_array(rebalance())
+	# Seul ce qui vient de tomber peut être cassé : ce qui était déjà là, la joueuse l'a peut-être
+	# fusionné exprès, et le bocal ne défait pas ce qu'elle a fait.
+	ops.append_array(_rebalance(SLACK, fresh, true))
 	return ops
 
 
-## Ramène le nombre d'objets vers la cible, une fusion ou une casse à la fois.
+## Ramène le nombre d'objets vers la cible, une fusion ou une casse à la fois, sans égard pour ce
+## qui a été fusionné à la main : à réserver aux moments où le niveau du bocal change pour de bon
+## (nouvelle capacité, nouveau bocal).
 func rebalance(slack: int = SLACK) -> Array[Dictionary]:
+	return _rebalance(slack, {}, false)
+
+
+## La joueuse échange des coupures du bocal contre d'autres de même valeur : une fusion à la main.
+## Faux, sans rien changer, si ces coupures n'y sont pas toutes ou si le compte n'y est pas.
+func exchange(inputs: Array, outputs: Array) -> bool:
+	var needed := {}
+	var given := 0
+	for value in inputs:
+		if not Denominations.VALUES.has(value):
+			return false
+		needed[value] = needed.get(value, 0) + 1
+		given += value
+	var received := 0
+	for value in outputs:
+		if not Denominations.VALUES.has(value):
+			return false
+		received += value
+	if given <= 0 or given != received:
+		return false
+	for value in needed:
+		if composition.get(value, 0) < needed[value]:
+			return false
+	for value in inputs:
+		_remove(value)
+	for value in outputs:
+		composition[value] = composition.get(value, 0) + 1
+	return true
+
+
+## `fresh` : les coupures qui viennent de tomber ({ valeur: nombre }). Si `only_fresh`, elles seules
+## (et ce qu'elles donnent en se cassant) peuvent être cassées.
+func _rebalance(slack: int, fresh: Dictionary, only_fresh: bool) -> Array[Dictionary]:
 	var ops: Array[Dictionary] = []
 	var target := target_count()
 	var count := object_count()
@@ -112,17 +156,22 @@ func rebalance(slack: int = SLACK) -> Array[Dictionary]:
 		var inputs: Array = Denominations.BREAKS[output]
 		for value in inputs:
 			_remove(value)
+			if fresh.get(value, 0) > 0:
+				fresh[value] -= 1
 		composition[output] = composition.get(output, 0) + 1
 		ops.append({"op": OP_MERGE, "inputs": inputs.duplicate(), "output": output})
 		count -= inputs.size() - 1
 	while count < target - slack:
-		var input := _best_split(target - count)
+		var input := _best_split(target - count, fresh, only_fresh)
 		if input == 0:
 			break
 		var outputs: Array = Denominations.BREAKS[input]
 		_remove(input)
+		if fresh.get(input, 0) > 0:
+			fresh[input] -= 1
 		for value in outputs:
 			composition[value] = composition.get(value, 0) + 1
+			fresh[value] = fresh.get(value, 0) + 1
 		ops.append({"op": OP_SPLIT, "input": input, "outputs": outputs.duplicate()})
 		count += outputs.size() - 1
 	return ops
@@ -212,13 +261,15 @@ func _best_merge() -> int:
 
 ## Coupure à casser parmi celles qui tiennent dans `room` objets de plus : celle qui encombre le
 ## plus par rapport à ce qu'elle donnerait. Sans cet écart, toute la monnaie finirait en centimes.
-## 0 si rien ne peut être cassé.
-func _best_split(room: int) -> int:
+## 0 si rien ne peut être cassé. Avec `only_fresh`, ne regarde que les coupures de `fresh`.
+func _best_split(room: int, fresh: Dictionary, only_fresh: bool) -> int:
 	var best := 0
 	var best_score := -INF
 	for i in range(Denominations.VALUES.size() - 1, -1, -1):
 		var value: int = Denominations.VALUES[i]
 		if composition.get(value, 0) == 0 or not Denominations.BREAKS.has(value):
+			continue
+		if only_fresh and fresh.get(value, 0) <= 0:
 			continue
 		var outputs: Array = Denominations.BREAKS[value]
 		if outputs.size() - 1 > room:

@@ -133,6 +133,98 @@ func test_a_big_catch_up_is_described_by_its_operations() -> void:
 	check(jar.object_count() >= jar.target_count() - Jar.SLACK, "à 2 objets près de la cible")
 
 
+## Fusionne à la main tout ce qui peut l'être par paires : 1 € + 1 € -> 2 €, 50 c + 50 c -> 1 €, etc.
+func _fuse_pairs(jar: Jar) -> int:
+	var fused := 0
+	for value in [1, 5, 10, 50, 100]:
+		while jar.composition.get(value, 0) >= 2:
+			check(jar.exchange([value, value], [value * 2]), "fusion de deux coupures de %d c" % value)
+			fused += 1
+	return fused
+
+
+func test_a_hand_merge_keeps_the_money() -> void:
+	var jar := _jar()
+	jar.set_cents(DAY / 2)
+	var before := jar.object_count()
+	var ones: int = jar.composition.get(100, 0)
+	check(ones >= 2, "au moins deux pièces de 1 € dans un demi-pot (obtenu %d)" % ones)
+	check(jar.exchange([100, 100], [200]), "deux pièces de 1 € en font une de 2 €")
+	check_eq(jar.cents(), DAY / 2, "même valeur")
+	check_eq(jar.object_count(), before - 1, "un objet de moins")
+	check_eq(jar.composition.get(100, 0), ones - 2, "deux pièces de 1 € en moins")
+
+
+func test_a_hand_merge_is_refused_when_it_does_not_add_up() -> void:
+	var jar := _jar()
+	jar.set_cents(DAY / 2)
+	var before := jar.composition.duplicate()
+	check(not jar.exchange([100, 100], [500]), "2 € ne font pas 5 €")
+	check(not jar.exchange([100, 100], [199]), "199 c n'est pas une coupure")
+	check(not jar.exchange([], []), "rien contre rien")
+	check(not jar.exchange([1000000, 1000000], [1000000, 1000000]), "des coupures que le bocal n'a pas")
+	var too_many: Array[int] = []
+	for _i in int(jar.composition.get(100, 0)) + 1:
+		too_many.append(100)
+	check(not jar.exchange(too_many, too_many), "plus de pièces de 1 € qu'il n'y en a")
+	check_eq(jar.composition, before, "un refus ne change rien")
+
+
+func test_what_was_merged_by_hand_is_never_broken_by_the_next_cents() -> void:
+	var jar := _jar()
+	jar.set_cents(DAY / 2)
+	var fused := _fuse_pairs(jar)
+	check(fused >= 5, "plusieurs fusions à la main (obtenu %d)" % fused)
+	check(jar.object_count() < jar.target_count() - Jar.SLACK, "le bocal compte moins d'objets que son niveau")
+	var big := {}
+	for value in jar.composition:
+		if value >= 100:
+			big[value] = jar.composition[value]
+	# Autant de centimes que de fusions : chacun rend au bocal un des objets que la main lui a ôtés.
+	var splits := 0
+	var merges := 0
+	for _cent in fused:
+		for op in jar.add_cents(1):
+			if op["op"] == Jar.OP_SPLIT:
+				splits += 1
+			elif op["op"] == Jar.OP_MERGE:
+				merges += 1
+	check_eq(splits, 0, "rien n'est cassé pour compenser")
+	check_eq(merges, 0, "et rien ne fusionne tant que le compte n'y est pas")
+	for value in big:
+		check_eq(jar.composition.get(value, 0), big[value], "les coupures de %d c sont toujours là" % value)
+
+
+func test_after_hand_merges_the_jar_fills_up_again_then_merges_as_before() -> void:
+	var jar := _jar()
+	jar.set_cents(DAY / 2)
+	_fuse_pairs(jar)
+	var merges := 0
+	for _cent in DAY / 4:
+		for op in jar.add_cents(1):
+			if op["op"] == Jar.OP_MERGE:
+				merges += 1
+	check(merges > 0, "les fusions automatiques ont repris")
+	check(jar.object_count() <= jar.target_count(), "pas plus d'objets que la cible")
+	check(jar.object_count() >= jar.target_count() - Jar.SLACK, "le compte y est de nouveau")
+
+
+func test_a_catch_up_only_breaks_what_just_fell() -> void:
+	var jar := _jar()
+	jar.set_cents(DAY / 2)
+	_fuse_pairs(jar)
+	var kept := {}
+	for value in jar.composition:
+		kept[value] = jar.composition[value]
+	var before := jar.composition.duplicate()
+	var ops := jar.add_cents(DAY)
+	check_eq(_replay(before, ops), jar.composition, "les opérations redonnent le contenu")
+	check_eq(jar.cents(), DAY / 2 + DAY, "valeur")
+	# Ce qui était là avant le rattrapage y est encore, coupure par coupure.
+	for value in kept:
+		check(jar.composition.get(value, 0) >= kept[value], "aucune coupure de %d c d'avant n'a été cassée" % value)
+
+
 func test_recomposing_matches_the_target() -> void:
 	for size in Jar.SIZES:
 		var jar := _jar(size)

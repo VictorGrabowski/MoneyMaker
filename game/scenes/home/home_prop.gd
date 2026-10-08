@@ -7,6 +7,11 @@ const GameState := preload("res://core/state/game_state.gd")
 const Weather := preload("res://core/world/weather.gd")
 
 signal activated(kind: String)
+## Pour un objet qu'on peut aussi saisir (drag_threshold > 0) : la main vient de l'emporter, le
+## déplace, le lâche. `at` : la position de la souris, dans le repère de get_global_transform().
+signal grabbed(kind: String, at: Vector2)
+signal dragged(kind: String, at: Vector2)
+signal dropped(kind: String)
 
 const PAY_SHEET := "fiche_de_paie"
 const CALENDAR := "calendrier"
@@ -52,7 +57,14 @@ var enabled := true:
 		enabled = value
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if value else Control.CURSOR_ARROW
 
+## Au-delà de ce trajet (en pixels), un appui devient une saisie au lieu d'un clic. 0 : l'objet ne
+## se saisit pas, il s'active dès l'appui.
+var drag_threshold := 0.0
+
 var _tween: Tween
+var _pressed := false
+var _press_at := Vector2.ZERO
+var _carried := false
 
 
 func _ready() -> void:
@@ -67,8 +79,32 @@ func _ready() -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	var button := event as InputEventMouseButton
-	if enabled and button != null and button.button_index == MOUSE_BUTTON_LEFT and button.pressed:
-		activated.emit(kind)
+	if button != null and button.button_index == MOUSE_BUTTON_LEFT:
+		if button.pressed and enabled:
+			if drag_threshold <= 0.0:
+				activated.emit(kind)
+			else:
+				# Clic ou saisie ? On le saura au relâchement, ou dès que la main aura bougé.
+				_pressed = true
+				_carried = false
+				_press_at = button.position
+			accept_event()
+		elif not button.pressed and _pressed:
+			_pressed = false
+			if _carried:
+				_carried = false
+				dropped.emit(kind)
+			else:
+				activated.emit(kind)
+			accept_event()
+		return
+	var motion := event as InputEventMouseMotion
+	if motion != null and _pressed:
+		if not _carried and motion.position.distance_to(_press_at) > drag_threshold:
+			_carried = true
+			grabbed.emit(kind, get_global_transform() * _press_at)
+		if _carried:
+			dragged.emit(kind, get_global_transform() * motion.position)
 		accept_event()
 
 

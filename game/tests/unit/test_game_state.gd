@@ -66,6 +66,23 @@ func test_raising_the_salary_rebalances_the_jar() -> void:
 	check(state.jar.object_count() <= 45, "objets ramenés à la cible")
 
 
+func test_hand_merges_survive_a_reload_and_the_next_cents() -> void:
+	var state := _configured()
+	state.advance(_at("2026-10-05T12:00:00"))
+	var ones: int = state.jar.composition.get(100, 0)
+	check(ones >= 2, "au moins deux pièces de 1 € à midi (obtenu %d)" % ones)
+	check(state.jar.exchange([100, 100], [200]), "fusion à la main")
+	var twos: int = state.jar.composition.get(200, 0)
+
+	var reloaded := _reload(state, "2026-10-05T12:00:00")
+	check_eq(reloaded.jar.composition, state.jar.composition, "le bocal est retrouvé tel que la main l'a laissé")
+	# Dix secondes de salaire plus tard, rien n'a été cassé pour compenser.
+	reloaded.advance(_at("2026-10-05T13:00:10"))
+	for op in reloaded.last_jar_ops:
+		check(op["op"] != Jar.OP_SPLIT, "aucune coupure cassée après le rechargement")
+	check(reloaded.jar.composition.get(200, 0) >= twos, "la pièce de 2 € faite à la main est toujours là")
+
+
 func test_save_and_reload_then_catch_up() -> void:
 	# Fermé lundi à 15 h, rouvert jeudi à 10 h : rien ne manque, rien n'est payé deux fois.
 	var state := _configured()

@@ -40,13 +40,28 @@ l'heure et le soleil ; sa météo, celle de la ville réglée sur le baromètre.
 | Calendrier | Au mur du bureau | Ce que chaque jour a rapporté ; marquer un congé, un férié, un jour sans solde |
 | Baromètre | Au mur du bureau | La ville, pour la météo réelle, ou un temps choisi |
 | Caisse | Sur le comptoir | Le ticket du soir |
-| Bocal | Sur le comptoir | Le voir de près : attraper une pièce, tapoter la vitre, Espace pour le secouer |
+| Bocal | Sur le comptoir | Un clic l'ouvre en gros plan ; le faire glisser le secoue sur place |
+
+### Jouer avec le bocal, en gros plan
+
+| Geste | Effet |
+|---|---|
+| Glisser une pièce | L'attraper, la lancer |
+| Glisser une pièce sur une semblable | Elles fusionnent en une plus grosse, qui reste dans la main : on peut enchaîner jusqu'aux billets. À trois (2 € + 2 € + 1 €), la troisième vient d'elle-même |
+| Glisser le bocal par le verre, ou par un vide | Le secouer (le curseur change au-dessus du verre) |
+| Clic dans un vide | Tapoter la vitre |
+| Espace | Secouer d'un coup |
+
+Une pièce tombée dehors retourne d'elle-même dans le bocal, tant qu'il n'est pas plein. Le bocal ne
+recasse jamais ce qu'on a fusionné : il compte seulement moins de pièces, et les centimes suivants
+tombent sans fusionner jusqu'à ce qu'il ait retrouvé son niveau.
 
 ### En widget
 
 | Geste | Effet |
 |---|---|
-| Glisser | Déplacer le widget (sa place est retenue) |
+| Glisser | Déplacer le widget (sa place est retenue) ; en mini-bocal, le contenu du bocal s'en ressent |
+| Glisser une pièce du mini-bocal | L'attraper, la fusionner, comme en gros plan |
 | Clic droit | Format suivant : pastille, bandeau, mini-bocal |
 | Molette | Plus ou moins opaque |
 | Double-clic, Échap ou W | Revenir à la maison |
@@ -99,6 +114,7 @@ des réglages de la v1 :
 | `--closeup=calendrier` | Ouvre un gros plan : `fiche_de_paie`, `calendrier`, `barometre`, `caisse`, `cadre_du_widget`, `bocal` |
 | `--shot=C:\tmp\vue.png` | Enregistre une capture et un rapport, puis quitte (`--shot-delay=8` pour attendre 8 s) |
 | `--tour` | Avec `--shot` : ouvre et referme chaque gros plan, passe par le mini-bocal, revient |
+| `--gestures` | Avec `--shot` : joue les gestes à la souris avec de vrais événements (secouer le bocal, l'ouvrir d'un clic, fusionner des pièces, clic droit sur le mini-bocal) ; `--snaps=C:\tmp\geste` enregistre des captures en plein geste |
 | `--watch=40` | Avec `--shot` : observe le bocal 40 s et rapporte la part du temps où il simule |
 | `--mouse=0.8,-0.6` | Avec `--shot` : fait comme si la souris était là (de -1 à 1) |
 | `--search=Lyon` | Avec `--shot` : cherche une ville auprès du service météo |

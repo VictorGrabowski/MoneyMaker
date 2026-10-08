@@ -4,7 +4,14 @@
 ## - Le monde est une tranche mince (DEPTH) : les objets s'y recouvrent et s'y inclinent, mais
 ##   restent tournés vers la joueuse.
 ## - Le bocal est ouvert et posé sur un comptoir : trop plein, il déborde pour de bon.
-## - La scène ne décide de rien : elle joue les opérations du modèle (core/money/jar.gd).
+## - La scène joue les opérations du modèle (core/money/jar.gd). Elle ne décide que d'une chose :
+##   les fusions que la joueuse fait à la main, qu'elle annonce par `merged_by_hand`.
+##
+## Ce qu'on peut y faire à la souris :
+## - attraper une pièce, la lancer ;
+## - la faire glisser sur ses semblables : elles fusionnent, et la nouvelle reste en main ;
+## - saisir le bocal par une paroi (ou par un vide) et le secouer ;
+## - cliquer dans le vide : tapoter la vitre.
 extends SubViewportContainer
 
 const Denominations := preload("res://core/money/denominations.gd")
@@ -16,6 +23,9 @@ const ART_FACE_SHADER := preload("res://scenes/jar/art_face.gdshader")
 signal object_landed(value: int, strength: float)
 ## Des coupures viennent de fusionner en `output`, ou une coupure de se casser.
 signal objects_changed(output: int)
+## La joueuse vient de fusionner des coupures à la main : `inputs` sont devenues `outputs`.
+## La scène l'a déjà joué ; au modèle d'en prendre acte.
+signal merged_by_hand(inputs: Array[int], outputs: Array[int])
 
 ## Intérieur du bocal par taille : largeur et hauteur, en unités (1 unité ≈ 3 cm).
 ## Réglé pour qu'un bocal plein (Jar.FULL_OBJECTS) arrive au bord.
@@ -65,6 +75,41 @@ const GRAB_MAX_SPEED := 45.0
 const MERGE_SECONDS := 0.18
 const CUSHION_SECONDS := 0.15
 
+## Fusion à la main : la coupure tenue fusionne avec une semblable qu'elle touche, une fois que la
+## main a parcouru ce trajet (attraper n'est pas fusionner) et après cette pause entre deux fusions.
+const HAND_MERGE_TRAVEL := 0.35
+const HAND_MERGE_PAUSE := 0.28
+## Contacts suivis pour la coupure tenue (un seul suffit aux autres, pour leur tintement).
+const HELD_CONTACTS := 8
+
+## Le bocal saisi suit la main dans ces limites, de chaque côté et vers le haut (en unités)…
+const JAR_SWAY := Vector2(0.8, 1.0)
+## … à cette vitesse au plus (unités par seconde) : assez pour brasser, pas assez pour tout vider.
+## Mesuré sur un Pot plein : à 12 de côté et 7 vers le haut, une secousse d'une demi-seconde en
+## jetait 55 pièces sur 88 par-dessus bord.
+const JAR_SPEED := Vector2(7.0, 4.5)
+const JAR_RETURN_SPEED := 6.0
+## Pas de physique par seconde tant que le bocal bouge. À 60, une pièce en l'air et une paroi qui
+## vient à sa rencontre se croisent en un seul pas : la pièce se retrouve dehors, à travers le verre.
+const SHAKE_TICKS := 180
+
+## Une pièce tombée hors du bocal y retourne d'elle-même après ce temps au repos, tant que le tas
+## reste sous ce niveau (1.0 = au bord) : au-delà, le bocal déborde pour de bon et elle reste dehors.
+const TIDY_AFTER := 3.0
+const TIDY_PERIOD := 0.5
+const TIDY_BELOW := 0.8
+## Fond du bocal, et jupe des parois sous le fond : rien ne roule sous un bocal soulevé.
+const JAR_FLOOR := 0.4
+const JAR_SKIRT := 1.4
+## De part et d'autre d'une paroi, c'est le bocal qu'on saisit, pas la pièce qui s'y appuie.
+const JAR_GRIP_BAND := 0.22
+## Trajet de la main à partir duquel un appui sur le bocal devient une saisie (sinon : un tapotement).
+const JAR_DRAG_START := 0.10
+
+## Widget déplacé : part du mouvement de la fenêtre que le contenu ressent, et plafond par image.
+const SWAY_GAIN := 0.5
+const SWAY_MAX := Vector2(7.0, 5.0)
+
 ## Garde de mise au repos : un objet resté lent pendant CALM_AFTER est fortement amorti, pour qu'il
 ## s'arrête au lieu de vibrer et de tenir tout le tas éveillé.
 const GUARD_PERIOD := 0.25
@@ -111,9 +156,38 @@ var _redraw_requested := true
 ## Temps passé à simuler et redessiner depuis le lancement, en secondes : pour mesurer ce que coûte le bocal.
 var busy_seconds := 0.0
 
+## Le bocal lui-même (fond et parois), qui suit la main quand on le secoue.
+var _jar_body: AnimatableBody3D
+var _jar_offset := Vector3.ZERO
+## Vrai : le bocal suit la main. `_jar_candidate` : appui sur le bocal, sans mouvement encore.
+var _jar_held := false
+var _jar_candidate := false
+## Écart entre la main et le bocal à la saisie, et point de l'appui (pour le tapotement).
+var _jar_grip := Vector3.ZERO
+var _press_point := Vector3.ZERO
+## Vrai tant que la physique tourne à SHAKE_TICKS ; et la cadence à rétablir ensuite.
+var _fine_physics := false
+var _usual_ticks := 60
+## Temps avant de ranger la prochaine pièce tombée dehors.
+var _tidy_in := TIDY_PERIOD
+
+## La souris en coordonnées locales, tenue à jour par les événements reçus ; et si son bouton est enfoncé.
+var _pointer := Vector2.ZERO
+var _pointer_down := false
 var _grabbed: RigidBody3D = null
 var _grab_depth := 0.0
-var _press_pending := false
+## Trajet de la main depuis la saisie ou la dernière fusion, et pause avant la fusion suivante.
+var _grab_travel := 0.0
+var _grab_last := Vector3.ZERO
+var _merge_pause := 0.0
+## Fusions à la main depuis le lancement (pour les essais).
+var hand_merges := 0
+
+## Coupures en attente d'apparition qu'une autre opération a déjà consommées.
+var _cancelled: Array[int] = []
+## Déplacement de la fenêtre depuis le dernier pas de physique (widget), et sa vitesse lissée.
+var _frame_shift := Vector2.ZERO
+var _frame_velocity := Vector2.ZERO
 
 
 ## À appeler avant d'ajouter la scène à l'arbre.
@@ -183,7 +257,8 @@ func _process(delta: float) -> void:
 		_drop_rate = DROPS_PER_SECOND
 
 	# Le bocal n'est redessiné que si quelque chose y bouge : au repos, il ne coûte rien.
-	var busy := camera_moving or _grabbed != null or not _pending.is_empty() or _is_anything_moving()
+	var busy := camera_moving or _grabbed != null or _jar_held or not _jar_offset.is_zero_approx() \
+			or not _pending.is_empty() or _is_anything_moving()
 	if busy:
 		busy_seconds += delta
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -204,30 +279,307 @@ func _is_anything_moving() -> bool:
 func _physics_process(delta: float) -> void:
 	if not _simulating:
 		return
-	if _press_pending:
-		_press_pending = false
-		_press()
+	_move_jar(delta)
+	_sway_with_the_frame(delta)
 	if _grabbed != null:
 		if not is_instance_valid(_grabbed) or _grabbed.has_meta(&"leaving"):
 			_grabbed = null
 		else:
-			var to_target := _mouse_on_plane(_grab_depth) - _grabbed.global_position
+			var target := _point_on_plane(_pointer, _grab_depth)
+			_grab_travel += target.distance_to(_grab_last)
+			_grab_last = target
 			_grabbed.sleeping = false
-			_grabbed.linear_velocity = (to_target * GRAB_STIFFNESS).limit_length(GRAB_MAX_SPEED)
+			_grabbed.linear_velocity = ((target - _grabbed.global_position) * GRAB_STIFFNESS).limit_length(GRAB_MAX_SPEED)
+			_merge_pause = maxf(0.0, _merge_pause - delta)
+			if _merge_pause <= 0.0 and _grab_travel >= HAND_MERGE_TRAVEL:
+				_try_hand_merge()
 	_guard_in -= delta
 	if _guard_in <= 0.0:
 		_guard_in = GUARD_PERIOD
 		_guard()
 
 
+## La souris, vue du bocal. Tout passe par press_at(), drag_to() et release() : la maison s'en sert
+## aussi quand c'est elle qui reçoit les clics (bocal posé sur le comptoir).
 func _gui_input(event: InputEvent) -> void:
+	var mouse := event as InputEventMouse
+	if mouse == null:
+		return
 	var button := event as InputEventMouseButton
-	if button == null or button.button_index != MOUSE_BUTTON_LEFT:
+	if button == null:
+		# Un mouvement ne regarde le bocal que s'il tient quelque chose.
+		if is_holding():
+			drag_to(mouse.position)
+			accept_event()
+		elif not compact:
+			# Le curseur dit ce qu'un appui ferait : saisir le bocal, attraper une pièce, tapoter.
+			if _on_glass(_point_on_plane(mouse.position, 0.0)):
+				mouse_default_cursor_shape = Control.CURSOR_MOVE
+			elif _pick(mouse.position) != null:
+				mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			else:
+				mouse_default_cursor_shape = Control.CURSOR_ARROW
+		return
+	if button.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if button.pressed:
-		_press_pending = true
+		# Dans le widget, le double-clic ramène à la maison : il n'est pas pour le bocal.
+		if not (compact and button.double_click) and press_at(button.position):
+			accept_event()
+	elif _pointer_down:
+		release()
+		accept_event()
+
+
+# --- La main ---
+
+## Vrai tant que la main tient une coupure ou le bocal.
+func is_holding() -> bool:
+	return _grabbed != null or _jar_held or _jar_candidate
+
+
+## Appui en `point` (coordonnées locales). Vrai si le bocal s'en occupe : une coupure attrapée, le
+## bocal saisi, la vitre tapotée. Faux en widget quand l'appui ne vise aucune coupure : il sert
+## alors à déplacer la fenêtre.
+func press_at(point: Vector2) -> bool:
+	_pointer = point
+	var world := _point_on_plane(point, 0.0)
+	var body := _pick(point)
+	if not compact and _on_glass(world):
+		# Sur une paroi, c'est le bocal qu'on saisit, pas la pièce qui s'y appuie.
+		_hold_jar(world, false)
+	elif body != null:
+		_grab(body)
+	elif compact:
+		return false
+	elif _over_jar(world):
+		# Glissé, cet appui devient une saisie du bocal ; relâché sur place, un tapotement.
+		_hold_jar(world, false)
 	else:
-		_grabbed = null  # la pièce garde son élan : on peut la lancer
+		_tap(world)
+	_pointer_down = true
+	return true
+
+
+## Saisit le bocal tout de suite, la main en `point` : pour qui a déjà reconnu le geste (la maison,
+## quand le bocal est sur le comptoir et qu'on le fait glisser).
+func grab_jar_at(point: Vector2) -> void:
+	_pointer = point
+	_pointer_down = true
+	_hold_jar(_point_on_plane(point, 0.0), true)
+
+
+## La main est maintenant en `point`.
+func drag_to(point: Vector2) -> void:
+	_pointer = point
+
+
+## Le bouton est relâché : la coupure garde son élan (on peut la lancer), le bocal retourne à sa place.
+func release() -> void:
+	if _jar_candidate:
+		_tap(_press_point)
+	_jar_candidate = false
+	_jar_held = false
+	_pointer_down = false
+	_let_go()
+
+
+## Valeur de la coupure tenue, 0 si la main est vide. Écart du bocal à sa place, en unités.
+func held_value() -> int:
+	return _grabbed.get_meta(&"value") if _grabbed != null and is_instance_valid(_grabbed) else 0
+
+
+func jar_shift() -> Vector2:
+	return Vector2(_jar_offset.x, _jar_offset.y)
+
+
+## Position à l'écran (coordonnées locales) de chaque coupure posée de cette valeur.
+func local_points_of(value: int) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for body in _bodies():
+		if body.get_meta(&"value") == value:
+			points.append(_to_local(body.global_position))
+	return points
+
+
+## Position à l'écran du milieu d'une paroi (-1 : gauche, 1 : droite), là où l'on saisit le bocal.
+func local_point_of_wall(side: float) -> Vector2:
+	var interior: Vector2 = INTERIOR[_size]
+	return _to_local(_jar_offset + Vector3(signf(side) * (interior.x + GLASS) / 2.0, interior.y * 0.7, DEPTH / 2.0))
+
+
+## La fenêtre du widget vient de bouger de `pixels` : le contenu du bocal s'en ressentira.
+func sway(pixels: Vector2) -> void:
+	var per_unit := _to_local(Vector3.RIGHT).x - _to_local(Vector3.ZERO).x
+	if per_unit > 0.001:
+		_frame_shift += Vector2(pixels.x, -pixels.y) / per_unit
+
+
+func _grab(body: RigidBody3D) -> void:
+	_let_go()
+	_grabbed = body
+	_grab_depth = body.global_position.z
+	_grab_last = _point_on_plane(_pointer, _grab_depth)
+	_grab_travel = 0.0
+	body.max_contacts_reported = HELD_CONTACTS
+	_wake_around(body.global_position, 1.5)
+
+
+func _let_go() -> void:
+	if _grabbed != null and is_instance_valid(_grabbed):
+		_grabbed.max_contacts_reported = 1
+	_grabbed = null
+
+
+func _hold_jar(world: Vector3, at_once: bool) -> void:
+	_let_go()
+	_jar_grip = world - _jar_offset
+	_press_point = world
+	_jar_held = at_once
+	_jar_candidate = not at_once
+	if at_once:
+		_wake_all()
+
+
+## Vrai si ce point est sur une paroi de verre du bocal (à JAR_GRIP_BAND près).
+func _on_glass(world: Vector3) -> bool:
+	var interior: Vector2 = INTERIOR[_size]
+	var local := world - _jar_offset
+	return absf(absf(local.x) - (interior.x + GLASS) / 2.0) < JAR_GRIP_BAND \
+			and local.y > -0.1 and local.y < interior.y + 0.3
+
+
+## Vrai si ce point est sur le bocal ou dedans.
+func _over_jar(world: Vector3) -> bool:
+	var interior: Vector2 = INTERIOR[_size]
+	var local := world - _jar_offset
+	return absf(local.x) < (interior.x + GLASS) / 2.0 + JAR_GRIP_BAND \
+			and local.y > -0.1 and local.y < interior.y + 0.3
+
+
+## Le bocal suit la main tant qu'on le tient, puis retourne à sa place.
+func _move_jar(delta: float) -> void:
+	var target := Vector3.ZERO
+	if _jar_held or _jar_candidate:
+		var wanted := _point_on_plane(_pointer, 0.0) - _jar_grip
+		if _jar_candidate and wanted.distance_to(_jar_offset) > JAR_DRAG_START:
+			_jar_candidate = false
+			_jar_held = true
+			_wake_all()
+		target = _jar_offset
+		if _jar_held:
+			target = Vector3(clampf(wanted.x, -JAR_SWAY.x, JAR_SWAY.x), clampf(wanted.y, 0.0, JAR_SWAY.y), 0.0)
+	var step := target - _jar_offset
+	if step.is_zero_approx():
+		if not _jar_held and not _jar_offset.is_zero_approx():
+			_jar_offset = Vector3.ZERO
+			_jar_body.position = _jar_offset
+		if not _jar_held:
+			_set_fine_physics(false)
+		return
+	_set_fine_physics(true)
+	var limit := JAR_SPEED * delta if _jar_held else Vector2.ONE * JAR_RETURN_SPEED * delta
+	_jar_offset += Vector3(clampf(step.x, -limit.x, limit.x), clampf(step.y, -limit.y, limit.y), 0.0)
+	_jar_body.position = _jar_offset
+	_wake_all()
+
+
+## Affine la physique le temps d'une secousse, puis rétablit la cadence ordinaire.
+func _set_fine_physics(enabled: bool) -> void:
+	if enabled == _fine_physics:
+		return
+	_fine_physics = enabled
+	if enabled:
+		_usual_ticks = Engine.physics_ticks_per_second
+		Engine.physics_ticks_per_second = SHAKE_TICKS
+	else:
+		Engine.physics_ticks_per_second = _usual_ticks
+
+
+func _exit_tree() -> void:
+	_set_fine_physics(false)
+
+
+## Le widget qu'on déplace emporte son bocal : le contenu, lui, voudrait rester où il était.
+func _sway_with_the_frame(delta: float) -> void:
+	if _frame_shift == Vector2.ZERO and _frame_velocity.length() < 0.05:
+		_frame_velocity = Vector2.ZERO
+		return
+	# La souris ne bouge pas à chaque pas de physique : la vitesse est lissée, sans quoi un
+	# déplacement régulier secouerait autant qu'un coup sec.
+	var velocity := _frame_velocity.lerp(_frame_shift / delta, 0.35)
+	_frame_shift = Vector2.ZERO
+	var change := velocity - _frame_velocity
+	_frame_velocity = velocity
+	var kick := Vector3(
+		clampf(-change.x * SWAY_GAIN, -SWAY_MAX.x, SWAY_MAX.x),
+		clampf(-change.y * SWAY_GAIN, -SWAY_MAX.y, SWAY_MAX.y), 0.0)
+	if kick.length() < 0.05:
+		return
+	for body in _bodies():
+		body.sleeping = false
+		body.set_meta(&"calm", 0.0)
+		body.linear_velocity += kick
+
+
+func _wake_all() -> void:
+	for body in _bodies():
+		body.sleeping = false
+		body.set_meta(&"calm", 0.0)
+
+
+## Tapote la vitre : ce qui est autour sursaute.
+func _tap(world: Vector3) -> void:
+	for body in _bodies():
+		var away := body.global_position - world
+		if away.length() < 1.6:
+			body.sleeping = false
+			body.apply_central_impulse((away.normalized() + Vector3.UP * 0.6) * 1.5 * body.mass)
+
+
+## La coupure tenue touche-t-elle de quoi fusionner ? Si oui, la fusion se fait dans la main.
+func _try_hand_merge() -> void:
+	var held: int = _grabbed.get_meta(&"value")
+	var available := {}
+	for body in _bodies():
+		var value: int = body.get_meta(&"value")
+		available[value] = available.get(value, 0) + 1
+	for other in _grabbed.get_colliding_bodies():
+		var touched := other as RigidBody3D
+		if touched == null or touched == _grabbed or touched.has_meta(&"leaving") or not touched.has_meta(&"value"):
+			continue
+		var touched_value: int = touched.get_meta(&"value")
+		var recipe := Denominations.hand_merge(held, touched_value, available)
+		if not recipe.is_empty():
+			_merge_in_hand(touched, recipe["inputs"], recipe["outputs"])
+			return
+
+
+## Fusionne la coupure tenue avec celle qu'elle touche (et, pour une fusion à trois, avec la plus
+## proche de ce qui manque). La plus grosse des coupures obtenues reste en main.
+func _merge_in_hand(touched: RigidBody3D, inputs: Array[int], outputs: Array[int]) -> void:
+	var center := _grabbed.global_position
+	var bodies: Array[RigidBody3D] = [_grabbed, touched]
+	var missing := inputs.duplicate()
+	missing.erase(_grabbed.get_meta(&"value"))
+	missing.erase(touched.get_meta(&"value"))
+	for value in missing:
+		var body := _find_body(value, center, bodies)
+		if body == null:
+			return
+		bodies.append(body)
+	for body in bodies:
+		_leave(body, center)
+	_wake_around(center, 2.0)
+	for i in outputs.size():
+		_pending.append(outputs[i])
+		var at := center + Vector3(0.45 * i, 0.25 * i, 0.0)
+		get_tree().create_timer(MERGE_SECONDS).timeout.connect(_spawn_at.bind(outputs[i], at, _generation, i == 0))
+	_merge_pause = HAND_MERGE_PAUSE
+	_grab_travel = 0.0
+	hand_merges += 1
+	objects_changed.emit(outputs[0])
+	merged_by_hand.emit(inputs, outputs)
 
 
 # --- Ce que la scène montre ---
@@ -341,6 +693,14 @@ func set_simulating(enabled: bool) -> void:
 	_simulating = enabled
 	_redraw_requested = true
 	if not enabled:
+		# Rien ne reste en main, et le bocal est remis d'aplomb.
+		_jar_candidate = false
+		_jar_held = false
+		_pointer_down = false
+		_let_go()
+		_jar_offset = Vector3.ZERO
+		_jar_body.position = _jar_offset
+		_set_fine_physics(false)
 		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	PhysicsServer3D.space_set_active(_viewport.find_world_3d().space, enabled)
 
@@ -356,6 +716,9 @@ func jar_face_points(depth_sign: float) -> PackedVector2Array:
 		Vector3(half_width, 0.0, z), Vector3(-half_width, 0.0, z),
 	]
 	var points := PackedVector2Array()
+	# Le verre suit le bocal quand on le secoue.
+	for i in corners.size():
+		corners[i] += _jar_offset
 	for corner in corners:
 		points.append(_to_local(corner))
 	return points
@@ -399,14 +762,26 @@ func _place_camera() -> void:
 func _build_walls() -> void:
 	if _walls != null:
 		_walls.queue_free()
-	_walls = StaticBody3D.new()
-	_walls.collision_layer = LAYER_WALLS
-	_walls.collision_mask = 0
+	if _jar_body != null:
+		_jar_body.queue_free()
 	var material := PhysicsMaterial.new()
 	material.friction = 0.7
 	material.bounce = 0.05
+	# Ce qui ne bouge jamais : le comptoir, ses butées, les deux faces de la tranche.
+	_walls = StaticBody3D.new()
+	_walls.collision_layer = LAYER_WALLS
+	_walls.collision_mask = 0
 	_walls.physics_material_override = material
 	_viewport.add_child(_walls)
+	# Le bocal lui-même, un corps à part : il suit la main quand on le secoue, et pousse ce qu'il contient.
+	_jar_offset = Vector3.ZERO
+	_jar_held = false
+	_jar_candidate = false
+	_jar_body = AnimatableBody3D.new()
+	_jar_body.collision_layer = LAYER_WALLS
+	_jar_body.collision_mask = 0
+	_jar_body.physics_material_override = material
+	_viewport.add_child(_jar_body)
 
 	var interior: Vector2 = INTERIOR[_size]
 	var half_width := interior.x / 2.0
@@ -415,25 +790,31 @@ func _build_walls() -> void:
 	var span := 2.0 * reach + 2.0 * SLAB_WALL
 	var thick := DEPTH + 2.0 * SLAB_WALL
 	# Comptoir, sur lequel le bocal est posé.
-	_add_wall(Vector3(0.0, -SLAB_WALL / 2.0, 0.0), Vector3(span, SLAB_WALL, thick))
-	# Parois de verre : minces, pour que les pièces tombées dehors viennent s'y appuyer.
-	_add_wall(Vector3(-half_width - GLASS / 2.0, interior.y / 2.0, 0.0), Vector3(GLASS, interior.y, thick))
-	_add_wall(Vector3(half_width + GLASS / 2.0, interior.y / 2.0, 0.0), Vector3(GLASS, interior.y, thick))
+	_add_wall(_walls, Vector3(0.0, -SLAB_WALL / 2.0, 0.0), Vector3(span, SLAB_WALL, thick))
 	# Butées au bout du comptoir.
-	_add_wall(Vector3(-reach - SLAB_WALL / 2.0, tall / 2.0, 0.0), Vector3(SLAB_WALL, tall, thick))
-	_add_wall(Vector3(reach + SLAB_WALL / 2.0, tall / 2.0, 0.0), Vector3(SLAB_WALL, tall, thick))
+	_add_wall(_walls, Vector3(-reach - SLAB_WALL / 2.0, tall / 2.0, 0.0), Vector3(SLAB_WALL, tall, thick))
+	_add_wall(_walls, Vector3(reach + SLAB_WALL / 2.0, tall / 2.0, 0.0), Vector3(SLAB_WALL, tall, thick))
 	# Les deux faces de la tranche : derrière, et la vitre devant.
-	_add_wall(Vector3(0.0, tall / 2.0, -DEPTH / 2.0 - SLAB_WALL / 2.0), Vector3(span, tall, SLAB_WALL))
-	_add_wall(Vector3(0.0, tall / 2.0, DEPTH / 2.0 + SLAB_WALL / 2.0), Vector3(span, tall, SLAB_WALL))
+	_add_wall(_walls, Vector3(0.0, tall / 2.0, -DEPTH / 2.0 - SLAB_WALL / 2.0), Vector3(span, tall, SLAB_WALL))
+	_add_wall(_walls, Vector3(0.0, tall / 2.0, DEPTH / 2.0 + SLAB_WALL / 2.0), Vector3(span, tall, SLAB_WALL))
+
+	# Fond du bocal : au repos, il affleure le comptoir ; soulevé, il emporte les pièces.
+	_add_wall(_jar_body, Vector3(0.0, -JAR_FLOOR / 2.0, 0.0), Vector3(interior.x + 2.0 * GLASS, JAR_FLOOR, thick))
+	# Parois de verre : minces, pour que les pièces tombées dehors viennent s'y appuyer ; prolongées
+	# sous le fond, pour que rien ne roule sous le bocal quand on le soulève.
+	var wall_height := interior.y + JAR_SKIRT
+	var wall_middle := (interior.y - JAR_SKIRT) / 2.0
+	_add_wall(_jar_body, Vector3(-half_width - GLASS / 2.0, wall_middle, 0.0), Vector3(GLASS, wall_height, thick))
+	_add_wall(_jar_body, Vector3(half_width + GLASS / 2.0, wall_middle, 0.0), Vector3(GLASS, wall_height, thick))
 
 
-func _add_wall(center: Vector3, box_size: Vector3) -> void:
+func _add_wall(body: PhysicsBody3D, center: Vector3, box_size: Vector3) -> void:
 	var box := BoxShape3D.new()
 	box.size = box_size
 	var shape := CollisionShape3D.new()
 	shape.shape = box
 	shape.position = center
-	_walls.add_child(shape)
+	body.add_child(shape)
 
 
 # --- Objets ---
@@ -452,6 +833,7 @@ func _clear() -> void:
 	_generation += 1
 	_queue.clear()
 	_pending.clear()
+	_cancelled.clear()
 	_grabbed = null
 	for child in _objects.get_children():
 		child.queue_free()
@@ -478,10 +860,15 @@ func _spawn_falling(value: int) -> void:
 
 
 ## Fait apparaître une coupure sur place, avec un petit sursaut (résultat d'une fusion ou d'une casse).
-func _spawn_at(value: int, at: Vector3, generation: int) -> void:
-	_pending.erase(value)
+## `hold` : elle reste dans la main si le bouton est toujours enfoncé (fusion à la main).
+func _spawn_at(value: int, at: Vector3, generation: int, hold: bool = false) -> void:
 	if generation != _generation:
 		return
+	if _cancelled.has(value):
+		# Une autre opération a consommé cette coupure avant qu'elle n'apparaisse.
+		_cancelled.erase(value)
+		return
+	_pending.erase(value)
 	var body := _make_object(value)
 	body.position = Vector3(at.x, maxf(at.y, _half_width(value)), clampf(at.z, -0.08, 0.08))
 	if Denominations.is_coin(value):
@@ -495,6 +882,9 @@ func _spawn_at(value: int, at: Vector3, generation: int) -> void:
 	# Les animations sont attachées à l'objet : elles s'arrêtent d'elles-mêmes s'il disparaît.
 	body.create_tween().tween_property(visual, "scale", Vector3.ONE, MERGE_SECONDS).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_wake_around(body.position, 1.6)
+	if hold and _pointer_down and _grabbed == null and not _jar_held:
+		# La main n'a pas lâché : elle tient maintenant la nouvelle coupure, et peut enchaîner.
+		_grab(body)
 
 
 func _half_width(value: int) -> float:
@@ -651,8 +1041,7 @@ func _merge(inputs: Array, output: int) -> void:
 			if near == null:
 				near = body.global_position
 		else:
-			# Pas encore tombée : la coupure est retirée de la file d'attente.
-			_queue.erase(value)
+			_take_back(value)
 	if bodies.is_empty():
 		_queue.append(output)
 		return
@@ -672,7 +1061,7 @@ func _split(input: int, outputs: Array) -> void:
 	var taken: Array[RigidBody3D] = []
 	var body := _find_body(input, null, taken)
 	if body == null:
-		_queue.erase(input)
+		_take_back(input)
 		_queue.append_array(outputs)
 		return
 	var at := body.global_position
@@ -684,6 +1073,16 @@ func _split(input: int, outputs: Array) -> void:
 		var offset := Vector3((i - (outputs.size() - 1) / 2.0) * 0.35, 0.1 * i, 0.0)
 		get_tree().create_timer(MERGE_SECONDS).timeout.connect(_spawn_at.bind(value, at + offset, _generation))
 	objects_changed.emit(input)
+
+
+## Retire une coupure qui n'est pas encore posée : de ce qui devait tomber, sinon de ce qui allait
+## apparaître à la fin d'une fusion (elle n'apparaîtra pas).
+func _take_back(value: int) -> void:
+	if _queue.has(value):
+		_queue.erase(value)
+	elif _pending.has(value):
+		_pending.erase(value)
+		_cancelled.append(value)
 
 
 ## Fait disparaître un objet : il glisse vers `toward` en rétrécissant, sans plus rien heurter.
@@ -710,15 +1109,36 @@ func _wake_around(point: Vector3, radius: float) -> void:
 # --- Repos, chocs ---
 
 func _guard() -> void:
+	var outer_edge: float = INTERIOR[_size].x / 2.0 + GLASS
+	var spilled: RigidBody3D = null
 	for body in _bodies():
 		if body.sleeping:
+			# Posée hors du bocal : elle y retournera si elle y reste.
+			var outside: float = body.get_meta(&"outside", 0.0) + GUARD_PERIOD if absf(body.global_position.x) > outer_edge else 0.0
+			body.set_meta(&"outside", outside)
+			if outside >= TIDY_AFTER and spilled == null:
+				spilled = body
 			continue
+		body.set_meta(&"outside", 0.0)
 		var slow := body.linear_velocity.length() < CALM_SPEED and body.angular_velocity.length() < CALM_SPIN
 		var calm: float = body.get_meta(&"calm") + GUARD_PERIOD if slow else 0.0
 		body.set_meta(&"calm", calm)
 		var calming := calm >= CALM_AFTER and body != _grabbed
 		body.linear_damp = DAMP_CALMING.x if calming else DAMP_NORMAL.x
 		body.angular_damp = DAMP_CALMING.y if calming else DAMP_NORMAL.y
+	_tidy_in -= GUARD_PERIOD
+	if spilled != null and _tidy_in <= 0.0 and not is_holding() and _jar_offset.is_zero_approx() \
+			and _queue.is_empty() and _pending.is_empty() and pile_level() < TIDY_BELOW:
+		_put_back(spilled)
+		_tidy_in = TIDY_PERIOD
+
+
+## Une pièce tombée dehors s'éclipse et retombe dans le bocal.
+func _put_back(body: RigidBody3D) -> void:
+	var value: int = body.get_meta(&"value")
+	_leave(body, body.global_position + Vector3.UP * 0.5)
+	_queue.append(value)
+	_refresh_drop_rate()
 
 
 func _on_body_hit(_other: Node, body: RigidBody3D) -> void:
@@ -742,35 +1162,25 @@ func _on_body_hit(_other: Node, body: RigidBody3D) -> void:
 
 # --- Souris ---
 
-func _mouse_in_viewport() -> Vector2:
-	return get_local_mouse_position() * Vector2(_viewport.size) / size
-
-
-func _mouse_on_plane(depth: float) -> Vector3:
-	var mouse := _mouse_in_viewport()
-	var origin := _camera.project_ray_origin(mouse)
-	var direction := _camera.project_ray_normal(mouse)
+## Le point du monde visé par `point` (coordonnées locales), sur le plan de profondeur `depth`.
+func _point_on_plane(point: Vector2, depth: float) -> Vector3:
+	var view_point := point * Vector2(_viewport.size) / size
+	var origin := _camera.project_ray_origin(view_point)
+	var direction := _camera.project_ray_normal(view_point)
 	var hit: Variant = Plane(Vector3.BACK, depth).intersects_ray(origin, direction)
 	if hit == null:
 		return _grabbed.global_position if _grabbed != null else Vector3.ZERO
 	return hit
 
 
-## Clic : attrape l'objet visé, ou tapote la vitre si rien n'est visé.
-func _press() -> void:
-	var mouse := _mouse_in_viewport()
-	var origin := _camera.project_ray_origin(mouse)
-	var direction := _camera.project_ray_normal(mouse)
+## La coupure visée par `point` (coordonnées locales), null s'il n'y en a pas.
+func _pick(point: Vector2) -> RigidBody3D:
+	var view_point := point * Vector2(_viewport.size) / size
+	var origin := _camera.project_ray_origin(view_point)
+	var direction := _camera.project_ray_normal(view_point)
 	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 120.0, LAYER_OBJECTS)
 	var hit := _viewport.find_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty() and hit["collider"] is RigidBody3D:
-		_grabbed = hit["collider"]
-		_grab_depth = _grabbed.global_position.z
-		_wake_around(_grabbed.global_position, 1.5)
-		return
-	var tap := _mouse_on_plane(0.0)
-	for body in _bodies():
-		var away := body.global_position - tap
-		if away.length() < 1.6:
-			body.sleeping = false
-			body.apply_central_impulse((away.normalized() + Vector3.UP * 0.6) * 1.5 * body.mass)
+	if hit.is_empty():
+		return null
+	var body := hit["collider"] as RigidBody3D
+	return body if body != null and not body.has_meta(&"leaving") else null

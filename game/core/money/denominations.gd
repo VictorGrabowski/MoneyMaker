@@ -48,6 +48,49 @@ static func label(value: int) -> String:
 	return "%d €" % (value / 100)
 
 
+## Fusion que la joueuse déclenche en posant la coupure `held` sur la coupure `touched`.
+## `available` dit ce que le bocal contient ({ valeur: nombre }), ces deux-là comprises : une fusion
+## à trois va chercher sa troisième coupure dans le bocal.
+## Renvoie { "inputs": Array[int], "outputs": Array[int] }, ou {} si rien ne fusionne.
+static func hand_merge(held: int, touched: int, available: Dictionary) -> Dictionary:
+	# La table de casse, lue à l'envers.
+	for output in VALUES:
+		if not BREAKS.has(output):
+			continue
+		var inputs: Array = BREAKS[output]
+		if _has_both(inputs, held, touched) and _covers(available, inputs):
+			var needed: Array[int] = []
+			needed.assign(inputs)
+			var made: Array[int] = [output]
+			return {"inputs": needed, "outputs": made}
+	# Trois pareilles, faute de la petite qui complète : 3 × 2 c -> 5 c + 1 c.
+	if held == touched:
+		for output in VALUES:
+			if not BREAKS.has(output):
+				continue
+			var inputs: Array = BREAKS[output]
+			if inputs.size() == 3 and inputs[0] == held and inputs[1] == held and inputs[2] != held:
+				var three: Array[int] = [held, held, held]
+				if _covers(available, three):
+					var change: int = inputs[2]
+					var made: Array[int] = [output, change]
+					return {"inputs": three, "outputs": made}
+	return {}
+
+
+static func _has_both(inputs: Array, first: int, second: int) -> bool:
+	if first == second:
+		return inputs.count(first) >= 2
+	return inputs.has(first) and inputs.has(second)
+
+
+static func _covers(available: Dictionary, inputs: Array) -> bool:
+	for value in inputs:
+		if int(available.get(value, 0)) < inputs.count(value):
+			return false
+	return true
+
+
 ## 9231 -> « 92,31 € »
 static func format_cents(cents: int) -> String:
 	var euros := cents / 100
