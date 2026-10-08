@@ -194,10 +194,10 @@ Chaque mécanique indique les piliers qu'elle sert.
 | Bocal | 1 semaine de net | 160 | Catalogue, 12 € |
 | Bonbonne | 1 mois de net | 240 | Catalogue, 45 € |
 
-- **Fusion paresseuse :** le nombre d'objets visibles suit le remplissage (objets visibles = remplissage × objets-quand-plein, minimum 12). Quand il y a trop d'objets, les plus petites coupures fusionnent d'abord (2 × 1 c → 2 c, etc. ; table de fusion reprise de la v1). La fusion est automatique, accompagnée d'un petit « pouf » et d'un tintement.
-- **Débordement :** au-delà de 100 %, les nouvelles pièces glissent sur le comptoir (24 objets visibles au plus hors du bocal). Rien n'est perdu.
-- **Jouer :** attraper et lancer une pièce (glisser), secouer le bocal (glisser le bocal), tapoter la vitre (clic). Aucune récompense, aucune conséquence.
-- **Sensation « coussin » :** les pièces s'écrasent légèrement à l'impact puis reprennent leur forme en 0,15 s. Rebond faible : une pièce lâchée de la hauteur du bocal s'immobilise en moins de 1,5 s.
+- **Fusion paresseuse :** le nombre d'objets visibles suit le remplissage (objets visibles = remplissage × objets-quand-plein, minimum 12). Quand il y a un objet de trop, deux ou trois coupures fusionnent en une plus grosse (2 × 1 c → 2 c, etc. ; table de fusion reprise de la v1), une seule fusion à la fois. Le choix de la fusion garde au bocal ses proportions : beaucoup de pièces de 1 et 2 €, de la petite monnaie, peu de billets. Un Pot plein à 2 000 € net contient ainsi environ 85 pièces et 4 billets. La fusion est automatique, accompagnée d'un petit « pouf ».
+- **Débordement :** le bocal est ouvert. Au-delà de 100 %, il accepte jusqu'à 24 objets de plus : le tas dépasse du bord et des pièces roulent sur le comptoir. Rien n'est perdu.
+- **Jouer :** attraper et lancer une pièce (glisser), secouer le bocal (touche Espace), tapoter la vitre (clic). Aucune récompense, aucune conséquence.
+- **Sensation « coussin » :** les pièces gonflent légèrement à l'impact puis reprennent leur forme en 0,15 s. Rebond faible : une pièce lâchée de la hauteur du bocal s'immobilise en moins de 1,5 s.
 - **Coupures :** 8 pièces (1 c à 2 €), 7 billets (5 € à 500 €), lingot (1 000 €), gemme (10 000 €).
 
 #### M3 — Déposer (piliers 2, 4)
@@ -352,9 +352,10 @@ Chaque mécanique indique les piliers qu'elle sert.
 | Bandeau | 320 × 96 | Gagné aujourd'hui, anneau du minuteur, phrase d'ambiance |
 | Mini-bocal | 240 × 300 | Vue réduite du bocal, anneau du minuteur |
 
-- Toujours au premier plan, déplaçable, position et opacité (60 à 100 %) mémorisées.
-- Un clic ramène à la maison.
-- **Mode discret :** un raccourci clavier masque les montants.
+- Toujours au premier plan, déplaçable en le faisant glisser ; format, position et opacité (60 à 100 %) mémorisés.
+- Clic droit : format suivant. Molette : plus ou moins opaque. Double-clic : retour à la maison.
+- En pastille et en bandeau, le bocal est en pause : ce qui est gagné tombe au retour à la maison. En mini-bocal, il vit dans le widget.
+- **Mode discret :** un raccourci clavier masque les montants, à la maison comme dans le widget.
 
 ### Controls and Input
 
@@ -369,7 +370,9 @@ Chaque mécanique indique les piliers qu'elle sert.
 | Fermer un gros plan | Échap, clic droit, ou clic hors de l'objet | L'objet retourne à sa place |
 | Minuteur : attente / reprise | Espace, ou clic sur le minuteur | Déclic mécanique |
 | Mode discret | Ctrl + Maj + H | Les montants deviennent « •••• » |
-| Maison ↔ widget | Ctrl + Maj + M, ou clic sur le widget | Transition de 0,4 s |
+| Maison ↔ widget | Ctrl + Maj + M, double-clic sur le widget, ou clic sur l'icône de la zone de notification | Transition de 0,4 s |
+| Widget : format suivant | Clic droit sur le widget | Le widget change de taille |
+| Widget : opacité | Molette sur le widget | Le widget s'éclaircit ou s'assombrit |
 
 **Accessibilité**
 
@@ -829,7 +832,6 @@ Compteurs locaux, visibles dans le livret, jamais transmis.
 - Promenade à pied dans le village : la rue est une vue fixe.
 - Autres commerces et autres personnages à l'écran.
 - Multijoueur, livre d'or, partage.
-- Version et widget Android (prévus dans le brief d'origine).
 - Synchronisation entre appareils, plusieurs sauvegardes.
 
 **Reporté après la v1.0**
@@ -838,6 +840,7 @@ Compteurs locaux, visibles dans le livret, jamais transmis.
 - **Grands projets** : objectifs d'épargne sur plusieurs mois qui transforment la maison ou la rue (véranda, devanture, four à bois).
 - Radios en ligne.
 - Nouvelles pièces de la maison, jardin, place du marché.
+- **Application mobile, Android et iOS, avec widget d'écran d'accueil** (souhait de Victor du 8 octobre 2026, « plus tard »). Le jeu s'exporte sur mobile ; le widget d'écran d'accueil est un composant natif à écrire à part pour chaque système, qui affiche le montant calculé à partir de l'heure et des réglages, à la minute près.
 - Anglais, Linux, macOS.
 
 ---

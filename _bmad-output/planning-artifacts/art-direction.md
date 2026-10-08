@@ -84,6 +84,8 @@ no tilt and no thickness visible. It fills 92% of the image and is centered on a
 background. No shadow.
 Exception to the style rules: the value described below must be drawn large and clearly
 legible, in hand-lettered numerals. No other text.
+The outer ink outline is bold, about 8% of the subject's radius: the subject will be shown
+very small, around 60 pixels wide.
 ```
 
 ### DÉCOR (lieux)
@@ -97,7 +99,9 @@ Widest landscape format available.
 
 ## 5. Lot 1 — L'argent (à faire en premier)
 
-C'est le lot qui transforme le prototype. 17 images, toutes en vue de face.
+C'est le lot qui transforme le bocal. 17 images, toutes en vue de face.
+
+**Ces images se déposent directement dans `game/assets/art/money/`**, sous le nom indiqué, sans passer par `_inbox` : le jeu les détoure lui-même par leur forme et les utilise au lancement suivant, à la place de la face provisoire. Le dessin doit occuper environ 92 % de l'image, sur fond blanc. Vérifié avec deux fausses images ; pas encore avec un vrai dessin.
 
 **Parti pris validé : une monnaie « maison », basée sur l'euro.** Mêmes valeurs, mêmes tailles relatives et mêmes couleurs dominantes que l'euro, et tous les montants du jeu restent en euros ; seuls les motifs sont propres au jeu. Les valeurs à dessiner sont donc exactement celles des vraies pièces et des vrais billets.
 

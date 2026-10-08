@@ -76,6 +76,26 @@ Réponses aux huit hypothèses du premier jet.
 | R-0.3 | Les copies de secours de la sauvegarde tournent au lancement, pas à chaque écriture | Trois copies écrites à quelques secondes d'écart ne protègent de rien |
 | R-0.4 | Pointage manuel : 16 h comptées au plus par jour ; un pointage oublié s'arrête à minuit | Limite l'effet d'un oubli |
 
+## 2026-10-08 — Troisième série d'arbitrages de Victor
+
+| # | Décision | Statut | Effet |
+|---|---|---|---|
+| D25 | Retirer les installeurs `potato_rotato` du dépôt | décidé | Fait, avec le téléchargement interrompu du même dossier. L'historique git n'est pas purgé : la question est restée sans réponse |
+| D26 | Travailler sur une nouvelle branche | décidé | Branche `refonte-godot` ; rien n'est poussé |
+| D27 | Une application mobile (Android, iOS) avec widget d'écran d'accueil serait souhaitable, plus tard | noté | Ajouté aux reports d'après la v1.0. Corrige l'écart E4 : le jeu ne peut pas être lui-même un widget, mais un widget natif peut l'accompagner |
+
+## 2026-10-08 — Règles précisées pendant l'epic 1
+
+| # | Règle | Pourquoi |
+|---|---|---|
+| R-1.1 | La fusion à faire est choisie pour garder au bocal ses proportions (profil : pièces de 1 et 2 € nombreuses, petite monnaie, peu de billets), et non « la plus petite d'abord » | Mesuré : « la plus petite d'abord » donne un bocal de pièces toutes pareilles ; recomposer le bocal à chaque centime changerait jusqu'à 18 objets d'un coup |
+| R-1.2 | Dans la sauvegarde, le montant du bocal fait foi ; si le détail des coupures ne tombe pas juste, le bocal est recomposé pour ce montant | Un détail abîmé ne doit jamais créer ou détruire de l'argent |
+| R-1.3 | Le débordement est réel : le bocal est ouvert, le tas dépasse et des pièces roulent sur le comptoir, dans la limite de 24 objets en plus | Plus parlant qu'un compteur |
+| R-1.4 | En pastille et en bandeau, le bocal est en pause ; ce qui est gagné tombe au retour | Tenir la charge processeur du widget |
+| R-1.5 | Le jeu ne redessine l'écran que si quelque chose bouge | Mesuré : au repos, de 30 à 45 % d'un cœur à environ 1 % |
+| R-1.6 | Les illustrations de coupures sont détourées par le jeu, par leur forme | Gemini ne produit pas de fond transparent ; un détourage à la main serait une corvée |
+| R-1.7 | Secouer le bocal se fait à la touche Espace, pas en faisant glisser le bocal | Le glisser sert déjà à attraper une pièce |
+
 ## Repris du GDD v1
 
 | # | Intention v1 | Statut |
@@ -97,7 +117,7 @@ Réponses aux huit hypothèses du premier jet.
 | E1 | Fenêtres à volets, la rue n'est jamais montrée | On sort : la rue est une vue fixe en face de la pâtisserie | D4, D18 |
 | E2 | Argent utilisable le lendemain matin (rituel du rideau) | Argent utilisable après dépôt à la banque | D9 |
 | E3 | Aucun personnage visible | Honoré est visible dans sa boutique | D3 |
-| E4 | Widget Android en plateforme secondaire | Hors périmètre | Un jeu Godot ne peut pas être un widget d'écran d'accueil Android |
+| E4 | Widget Android en plateforme secondaire | Reporté après la v1.0 (voir D27) | Un jeu Godot ne peut pas être lui-même un widget d'écran d'accueil ; il faudra un widget natif à côté |
 | E5 | Radios FIP et Nova | Disques locaux en v1.0 | P7 |
 | E6 | Tables pour des clients dans le salon | Pas de clients | D11 : pas de vente |
 | E7 | « Rangement » des pièces à la main | Supprimé | D12 |

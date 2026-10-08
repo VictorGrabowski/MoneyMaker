@@ -55,10 +55,29 @@ Captures : `planning-artifacts/prototype/`.
 
 | Epic | État au 2026-10-08 | Preuve |
 |---|---|---|
-| 0 — Fondations | Stories 0.2 à 0.8 écrites, en attente de relecture. Story 0.1 (retrait des installeurs) en attente d'une décision de Victor | 64 tests hors écran ; cinq lancements enchaînés sur une sauvegarde d'essai avec une horloge simulée (fermé lundi 12 h, rouvert mardi, jeudi, horloge reculée au mercredi, retour au jeudi) : montants exacts, aucun double paiement |
-| 1 — Bocal et widget | Prototype seulement | Voir le tableau ci-dessus |
+| 0 — Fondations | Story 0.1 faite (installeurs retirés). Stories 0.2 à 0.8 écrites, en attente de relecture | Cinq lancements enchaînés sur une sauvegarde d'essai avec une horloge simulée (fermé lundi 12 h, rouvert mardi, jeudi, horloge reculée au mercredi, retour au jeudi) : montants exacts, aucun double paiement |
+| 1 — Bocal et widget | Les neuf stories sont écrites, en attente de relecture | 84 tests hors écran. Bocal plein pour les trois tailles : au repos, tas au bord ou un peu au-dessus (1,0 à 1,25 fois la hauteur selon les essais). Contenu identique après relance. Parcours scripté : secouer, trois formats de widget, opacité, retour à la maison |
 
-Non vérifié : le flux GitHub `game-tests.yml` n'a encore jamais tourné (rien n'est poussé).
+**Mesures de l'epic 1**, sur le PC de Victor (Ryzen 7 5700X3D, Radeon RX 6700 XT, 16 cœurs logiques) :
+
+| Situation | Processeur | Mémoire |
+|---|---|---|
+| Widget pastille ou bandeau | 0,6 à 1,6 % d'un cœur | 190 Mo |
+| Widget mini-bocal, pièces au repos | 0,6 % d'un cœur | 215 Mo |
+| Widget mini-bocal, salaire qui tombe (2 000 € net) | 3,9 % d'un cœur | 211 Mo |
+| Maison, pièces au repos | 1,6 % d'un cœur | 217 Mo |
+| Maison, salaire qui tombe | 9,0 % d'un cœur | 214 Mo |
+| 264 objets en mouvement, sans synchronisation verticale | 539 images/s | — |
+
+La cible du GDD (2 % d'un processeur 4 cœurs, soit 8 % d'un cœur) est tenue en widget sur cette machine.
+
+**Non vérifié :**
+
+- le flux GitHub `game-tests.yml` n'a encore jamais tourné (rien n'est poussé) ;
+- les performances sur un portable de bureau ;
+- les gestes à la souris (attraper une pièce, tapoter, glisser le widget, clic droit, molette) : écrits, pas exercés par les essais automatiques ;
+- l'icône de la zone de notification : créée selon le moteur, pas vue à l'écran ;
+- les sons : joués sans erreur, jamais écoutés.
 
 ## Decision Summary
 
@@ -123,7 +142,7 @@ MoneyMaker/
 │   │   ├── widget/                    # les trois formats
 │   │   ├── actors/                    # Chips, Honoré
 │   │   ├── shared/                    # interactable, parallax_plane, draggable, kraft_label
-│   │   └── prototype/                 # prototype du 2026-10-08, à démonter pendant l'epic 1
+│   │   └── workbench/                 # écran de travail (ardoise, fiche de paie) en attendant la maison
 │   ├── assets/
 │   │   ├── art/{home,street,grocery,money,pastries,products,chips,honore,props,paper}/
 │   │   ├── audio/{music,ambience,kitchen,chips,street,objects}/
@@ -190,29 +209,37 @@ MoneyMaker/
 
 **But :** de l'argent dessiné qui a une vraie profondeur.
 
+Écrit à l'epic 1 : le modèle dans `core/money/jar.gd` (14 tests), la scène dans `scenes/jar/`.
+
+**Le modèle décide, la scène joue.**
+
+- `Jar` connaît la taille, le contenu (nombre d'objets par coupure) et les repères de salaire. Plein à ras bord, un bocal vaut un jour (Pot), une semaine (Bocal) ou un mois (Bonbonne) de salaire.
+- Le nombre d'objets visé suit le niveau : `niveau × objets-quand-plein` (90, 160, 240), 12 au minimum, 24 de plus au maximum quand le bocal déborde. Calculé en entiers.
+- Chaque ajout renvoie une liste d'**opérations** : `tomber` (ces coupures tombent), `fusionner` (celles-ci n'en font plus qu'une), `casser` (celle-ci en donne de plus petites).
+- **Quelle fusion ?** Celle dont l'ingrédient principal « encombre » le plus : nombre d'objets de cette coupure ÷ sa part dans `PROFILE`. Le profil donne beaucoup de pièces de 1 et 2 €, de la petite monnaie, peu de billets. Une casse suit la même mesure, en sens inverse.
+- Un centime qui tombe déclenche au plus une fusion. Une casse n'arrive que si le nombre d'objets est à plus de 2 sous la cible (rattrapage, changement de salaire, changement de taille).
+- `Events.jar_changed(opérations)` porte ces opérations à la scène. Après les avoir jouées, l'écran compare le contenu de la scène à celui du modèle ; en cas d'écart, il refait le bocal et écrit un avertissement.
+
+**La scène.**
+
 - Le bocal est un monde 3D séparé, rendu dans une vignette transparente posée dans la scène 2D.
-- **Tranche mince :** 6 × 7 unités, profondeur 0,42 (1 unité ≈ 3 cm). Les pièces (diamètre 0,50 à 0,80) ne peuvent pas se coucher à plat : elles restent tournées vers la joueuse, s'inclinent et se recouvrent.
-- **Une pièce** = un cylindre pour la tranche + deux faces carrées à découpe alpha portant le dessin. **Un billet** = une plaque + deux faces. Maillages et matériaux partagés par coupure.
+- **Tranche mince :** profondeur 0,42 (1 unité ≈ 3 cm). Les pièces (diamètre 0,50 à 0,80) ne peuvent pas se coucher à plat : elles restent tournées vers la joueuse, s'inclinent et se recouvrent.
+- **Bocal ouvert, posé sur un comptoir.** Intérieur : 3,7 × 3,25 (Pot), 4,8 × 4,4 (Bocal), 5,9 × 5,4 (Bonbonne), réglé pour qu'un bocal plein arrive au bord. Parois de verre minces (0,14) ; comptoir de 2 unités de chaque côté, fermé par des butées. Trop plein, le tas dépasse et des pièces roulent dehors.
+- **Une pièce** = un cylindre pour la tranche + deux faces carrées portant le dessin. **Un billet** = une plaque + deux faces. Maillages et matériaux partagés par coupure.
+- **Faces :** l'illustration de `assets/art/money/` si elle existe, sinon une face provisoire dessinée par shader. Une illustration arrive sur fond blanc : `art_face.gdshader` la détoure par sa forme et retire le blanc dans la bande du bord, en gardant le trait de contour.
 - **Deux couches de collision :** parois (1), objets (2). Le clic ne vise que la couche 2, sinon il s'arrête sur la vitre.
-- **Le verre** est dessiné en 2D, derrière et devant la vignette, à partir de la projection des coins du bocal : il suit la parallaxe.
-- **Parallaxe :** la caméra du bocal se décale avec la souris (± 0,9 en largeur, ± 0,45 en hauteur) en visant toujours le même point.
-- **Chute :** 40 objets par seconde au plus ; au-delà, les objets attendent.
+- **Le verre** est dessiné en 2D, derrière et devant la vignette, à partir de la projection des coins du bocal : il suit la parallaxe et la taille.
+- **Cadrage :** la caméra se règle sur la taille du bocal et la forme de la vignette ; cadrage serré (`compact`) dans le widget.
+- **Chute :** 40 objets par seconde, davantage quand il y en a beaucoup, pour que tout soit tombé en 8 s.
+- **Fusion :** les objets concernés (les plus proches les uns des autres) glissent vers leur barycentre en rétrécissant, puis le résultat y apparaît avec un sursaut, en 0,18 s.
 
-**États d'un objet**
+**Garde de mise au repos.** Toutes les 0,25 s, un objet resté sous 0,6 unité/s et 2 rad/s depuis 1 s reçoit un amortissement fort (4 en translation, 8 en rotation) ; il le perd dès qu'il accélère. Le seuil de sommeil du moteur physique est relevé à 0,25 unité/s. Raison : une seule pièce qui vibre tient tout le tas éveillé. (Figer les objets a été écarté : un objet figé reste en l'air quand ce qui le portait s'en va.)
 
-```
-en attente ──▶ en chute ──▶ posé (endormi) ──▶ figé
-                  ▲              │                │
-                  └── secousse, saisie, choc ◀────┘
-```
+**Dessin à la demande.** La vignette n'est redessinée que si un objet bouge, apparaît ou disparaît, ou si la caméra se déplace ; sinon une dernière image est rendue et gardée. Le verre n'est redessiné que si le bocal a bougé à l'écran.
 
-**Garde de mise au repos** (à écrire pendant la story 1.2) : un objet resté sous 0,6 unité/s pendant 2 s est figé (corps statique). Une secousse, une saisie ou un choc à moins de 1,6 unité le libère. Raison : dans le prototype, une seule pièce qui vibre tient tout le tas éveillé.
+**En widget bandeau ou pastille :** le monde du bocal est mis en pause et son rendu coupé. Ce qui est gagné attend dans la file et tombe au retour. En mini-bocal, la vignette est déplacée dans le widget et continue de vivre.
 
-**En widget bandeau ou pastille :** le monde du bocal est mis en pause et son rendu coupé. Les espèces gagnées s'accumulent en attente et tombent au retour.
-
-**Sauvegarde :** la composition (nombre d'objets par coupure), pas les positions. Au lancement, les objets retombent en pluie de 8 s au plus.
-
-**Fusion :** `JarComposition` décide ; la scène retire les objets fusionnés et fait apparaître le résultat à leur barycentre.
+**Sauvegarde :** la taille, le montant et le contenu, pas les positions. Le montant fait foi : si le contenu ne tombe pas juste, le bocal est recomposé. Au lancement, tout retombe.
 
 ### 2. Horloge et rattrapage
 
@@ -236,13 +263,19 @@ en attente ──▶ en chute ──▶ posé (endormi) ──▶ figé
 | Bordure | Oui | Non |
 | Premier plan | Non | Oui |
 | Fond | Opaque | Transparent |
-| Taille de conception | 1920 × 1080 | Celle du format (320 × 96, 180 × 64, 240 × 300) |
-| Économie de processeur | Non | Oui |
-| Bocal | Simulé et rendu | En pause (sauf format mini-bocal) |
+| Taille de conception | 1920 × 1080 | Celle du format : pastille 180 × 64, bandeau 320 × 96, mini-bocal 240 × 300 |
+| Images par seconde | Celles de l'écran | 30 au plus |
+| Bocal | Simulé et rendu | En pause, sauf en mini-bocal |
+
+Écrit à l'epic 1 : `services/window_modes.gd`.
 
 - Séquence validée : fenêtrée → sans bordure → non redimensionnable → premier plan → transparente → taille de conception → taille → position.
 - Le retour applique la séquence inverse et restaure taille, position et mode.
 - L'état du jeu vit dans les services : changer de visage ne recharge rien.
+- `WindowModes` ne connaît aucune scène : il émet `changed`, l'écran s'arrange (il déplace le bocal dans le widget en mini-bocal).
+- Format, position et opacité sont retenus dans la sauvegarde. Une position qui ne touche plus aucun écran revient en bas à droite de l'écran courant.
+- **Mode économie du moteur** dans les deux visages : il ne redessine que si quelque chose change. Activé après le chargement, pas avant : les faces provisoires ont besoin d'être dessinées, et une attente sur « image dessinée » ne reviendrait jamais.
+- Icône de la zone de notification : un clic bascule entre les deux visages. Pas de menu (avec un menu, le moteur ne signale plus le clic).
 
 ### 4. Objets diégétiques
 
@@ -294,7 +327,7 @@ static func earned_today(schedule: WorkSchedule, net_monthly_cents: int, weekday
 **Communication.**
 
 - Un parent appelle ses enfants ; un enfant prévient par signal.
-- Entre lieux et services : signaux de `Events`, liste fermée — `cents_earned`, `settings_changed`, `jar_deposited`, `purchase_paid`, `focus_started`, `focus_ended`, `break_ended`, `batch_finished`, `batch_failed`, `piece_placed`, `gift_given`, `quest_completed`, `day_changed`.
+- Entre lieux et services : signaux de `Events`, liste fermée — `cents_earned`, `jar_changed`, `settings_changed`, `preferences_changed`, `jar_deposited`, `purchase_paid`, `focus_started`, `focus_ended`, `break_ended`, `batch_finished`, `batch_failed`, `piece_placed`, `gift_given`, `quest_completed`, `day_changed`.
 - Un nouveau signal transverse s'ajoute à cette liste dans ce document avant d'être écrit.
 
 **État.**
@@ -484,10 +517,25 @@ func abandon_batch() -> void
 func place_piece(piece_id: String, surface_id: String, near_slot: int) -> int   # emplacement obtenu, -1 si refusé
 func pin_quest(quest_id: String) -> bool
 
-# WindowModes
+# WindowModes — en place
+signal changed                                    # visage, format ou opacité
+var in_widget: bool
+var format: String                                # "pastille", "bandeau", "mini_bocal"
+var opacity: float
+func restore(state: GameState) -> void
+func toggle() -> void
 func show_home() -> void
 func show_widget(format: String = "") -> void
+func cycle_format() -> void
+func nudge_opacity(direction: int) -> void
+func move_widget_to(position: Vector2i) -> void
+func end_move() -> void
+func setup_tray(icon: Texture2D) -> void
+
+# Game — préférences, en place
 func set_discreet(enabled: bool) -> void
+func set_sound_enabled(enabled: bool) -> void
+func remember_widget(format: String, position: Vector2i, opacity: float) -> void
 
 # Scenes
 func go_to(place: String) -> void                 # "home", "street", "grocery"
@@ -514,15 +562,15 @@ func close_closeup() -> void
 
 | Cible du GDD | Moyen |
 |---|---|
-| 60 images/s à la maison | Rendu Compatibility ; 240 objets au plus dans le bocal ; objets figés une fois posés ; vignette du bocal mise à jour seulement quand un objet bouge ou que la souris se déplace |
-| ≤ 2 % de processeur en widget | Mode économie du moteur, 15 images/s, bocal en pause, aucune scène de lieu chargée |
+| 60 images/s à la maison | Rendu Compatibility ; 264 objets au plus dans le bocal ; garde de mise au repos ; vignette du bocal redessinée seulement quand quelque chose bouge |
+| ≤ 2 % de processeur en widget | Mode économie du moteur, 30 images/s au plus, bocal en pause en pastille et en bandeau |
 | ≤ 250 Mo de mémoire | Un seul lieu chargé à la fois ; décors en 1920 × 1080 par plan |
 | Démarrage ≤ 4 s | Le widget démarre sans charger la maison ; chargement des lieux en arrière-plan |
 | Changement de lieu ≤ 0,7 s | Préchargement du lieu voisin dès le survol de la porte |
 | Sauvegarde ≤ 50 ms | Fichier de quelques dizaines de ko ; écriture regroupée |
 | Minuteur exact | Échéance stockée en heure système, relue à chaque seconde |
 
-**À mesurer sur la machine de la destinataire** dès la fin de l'epic 1 : toutes les mesures actuelles viennent d'un PC de jeu.
+Les valeurs mesurées sont dans « État d'avancement ». **À mesurer sur la machine de la destinataire** : toutes les mesures actuelles viennent d'un PC de jeu.
 
 ## Deployment Architecture
 
@@ -579,12 +627,23 @@ Raison : aucune dépendance à installer ; il détecte les erreurs de script gr�
 **ADR-007 — `game/` à côté de la v1.**
 Raison : l'app Electron reste utilisable jusqu'à la parité ; l'historique git est conservé.
 
+**ADR-008 — Le bocal joue des opérations, il ne recalcule pas son contenu.**
+Contexte : recomposer le contenu idéal à chaque centime changeait de 2 à 18 objets d'un coup (mesuré sur une journée). Décision : le modèle garde son contenu et le fait évoluer d'une fusion à la fois, guidée par un profil. Conséquence : le contenu fait partie de la sauvegarde.
+
+**ADR-009 — Mise au repos par amortissement, pas par gel.**
+Options : figer les objets posés (comme la v1) ou les amortir. Décision : amortir. Raison : un objet figé reste en l'air quand ce qui le portait disparaît dans une fusion, ce qui arrive à chaque centime.
+
+**ADR-010 — Mobile plus tard : le calcul reste hors du moteur.**
+Contexte : Victor envisage une application Android et iOS avec widget d'écran d'accueil. Le jeu s'exporte sur mobile, mais un widget d'écran d'accueil est un composant natif (Kotlin, Swift) qui ne peut pas faire tourner le moteur. Décision, sans coût aujourd'hui : garder la paie dans `core/`, calculée uniquement à partir de l'heure et des réglages, et garder ces réglages dans un fichier JSON simple. Un widget natif pourra refaire le même calcul sans que le jeu soit lancé. Non étudié : les limites de rafraîchissement des widgets de chaque système, l'adaptation de l'écran au tactile et au format portrait.
+
 ## Risques ouverts
 
 | Risque | Gravité | Réponse |
 |---|---|---|
-| Performance inconnue sur un portable de bureau | Haute | Mesure sur la machine de la destinataire en fin d'epic 1 ; repli : moins d'objets, vignette à demi-résolution |
-| Mise au repos des pièces non garantie | Moyenne | Garde de mise au repos, story 1.2 |
+| Performance inconnue sur un portable de bureau | Haute | Mesure sur la machine de la destinataire ; repli : moins d'objets, vignette à demi-résolution |
+| Mise au repos des pièces | Basse | Traitée à l'epic 1 par amortissement ; à revérifier sur un portable de bureau |
+| Sons fabriqués par calcul, jamais écoutés | Moyenne | Écoute par Victor ; vrais enregistrements à l'epic 9 ; touche M pour couper |
+| Gestes à la souris non exercés par les essais | Moyenne | Essai à la main par Victor ; essais par événements simulés à ajouter |
 | Cohérence des illustrations générées | Moyenne | Feuille de style et image de référence dans chaque prompt (`art-direction.md`) |
 | Radios en ligne | Basse | Étude 9.4 ; la musique locale couvre le besoin |
 | Fenêtre transparente selon les pilotes graphiques | Basse | Repli sur un widget opaque à coins carrés |
