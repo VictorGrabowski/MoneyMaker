@@ -96,6 +96,23 @@ Réponses aux huit hypothèses du premier jet.
 | R-1.6 | Les illustrations de coupures sont détourées par le jeu, par leur forme | Gemini ne produit pas de fond transparent ; un détourage à la main serait une corvée |
 | R-1.7 | Secouer le bocal se fait à la touche Espace, pas en faisant glisser le bocal | Le glisser sert déjà à attraper une pièce |
 
+## 2026-10-08 — Règles précisées pendant l'epic 2
+
+Victor n'a rien pu essayer ce jour-là : R-2.1 et R-2.2 ajoutent des objets à la maison et restent **à confirmer**.
+
+| # | Règle | Pourquoi |
+|---|---|---|
+| R-2.1 | Deux objets de réglage s'ajoutent à la liste du GDD : un **baromètre** au mur (ville et météo) et un **petit cadre** sur le bureau (format du widget) | « Tous les réglages sont des objets » (story 2.8), et le GDD ne disait pas lesquels pour ces deux-là |
+| R-2.2 | Un **chevalet** sur le bureau dit « Au travail » ou « Au repos ». Il suit l'horaire tout seul ; il ne se clique que si la fiche de paie dit « Je pointe moi-même » : un clic pour commencer la journée, un autre pour la finir | Le pointage manuel du GDD n'avait pas d'objet. En prime, le chevalet répond à « pourquoi rien ne tombe ? » (pause déjeuner, soir, week-end) |
+| R-2.3 | Passer de l'horaire au pointage en cours de journée garde le temps déjà compté ; revenir à l'horaire dépointe. Dans les deux sens, rien n'est repris | Même principe que R-0.1 |
+| R-2.4 | Sur la fiche de paie, une heure s'écrit « 9 h 30 » (ou 9h30, 09:30, 9) et une somme « 2000 » ou « 1834,50 ». Ce qui est ambigu (« 9,5 », « 2.000 ») est refusé et entouré de rouge, jamais deviné ; rien n'est enregistré tant que la feuille n'est pas claire | La première version demandait les heures en décimales (8,5 pour 8 h 30). Un salaire mal lu fausserait tout le jeu sans que cela se voie |
+| R-2.5 | La hauteur du soleil est calculée par le jeu à partir de la ville (du centre de la France si aucune n'est réglée) ; seule la météo vient du réseau | La lumière suit l'heure réelle même hors ligne, et sans rien demander à la joueuse |
+| R-2.6 | La nuit, les objets prennent la teinte de la pièce mais gardent une part de clarté : un peu pour ce qui se clique, la moitié pour le bocal et l'ardoise | Rester lisible sans que le bocal ait l'air allumé |
+| R-2.7 | Un jour marqué « congé » ou « férié » tombe aux heures habituelles, et le chevalet dit « Au travail » ces jours-là | Le GDD dit que ces jours restent payés ; le chevalet montre si l'argent tombe, pas si l'on est au bureau |
+| R-2.8 | La caisse montre le ticket de la journée à partir de l'heure de fin ; avant, elle montre celui de la dernière journée payée. Le ticket dépasse de la caisse tant qu'il n'a pas été lu | On peut relire son dernier ticket à tout moment |
+| R-2.9 | La maison remplit toujours la hauteur de la fenêtre : agrandie sur un écran 16:10 ou 4:3, plus large à l'image sur un écran ultra-large | Pas de bandes vides, quel que soit l'écran de la destinataire |
+| R-2.10 | À la maison, la touche Espace ne secoue le bocal qu'en gros plan (et en mini-bocal) | Sur le comptoir, le bocal n'est qu'un objet parmi d'autres ; Espace servira au minuteur (GDD) |
+
 ## Repris du GDD v1
 
 | # | Intention v1 | Statut |

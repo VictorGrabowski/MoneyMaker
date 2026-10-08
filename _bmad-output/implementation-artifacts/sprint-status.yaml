@@ -37,7 +37,7 @@ development_status:
   0-4-salaire-en-centimes: review
   # core/money/payroll.gd.
   0-5-journal-des-jours-et-rattrapage: review
-  # Dans payroll.gd. Pas encore d'objet à l'écran pour marquer un jour ou pointer : prévu en 2.7 et 2.8.
+  # Dans payroll.gd. Les objets pour marquer un jour (calendrier) et pointer (chevalet) sont arrivés en 2.7 et 2.8.
   0-6-jours-particuliers-et-pointage: review
   # core/save/save_files.gd, core/save/migrations.gd, core/state/game_state.gd, services/game.gd.
   0-7-sauvegarde-versionnee: review
@@ -71,7 +71,35 @@ development_status:
   1-9-tintements: review
   epic-1-retrospective: optional
 
-  epic-2: backlog
+  # Tout l'epic 2 est en DÉCOR PROVISOIRE, dessiné par le code (scenes/home/home_decor.gd, home_prop.gd) :
+  # les illustrations le remplaceront sans toucher aux règles. Vérifié par captures et par un parcours
+  # scripté (--tour) ; aucun geste à la souris n'a été exercé, Victor n'a encore rien essayé.
+  epic-2: in-progress
+  # scenes/home/home.gd, home_layout.gd, scenes/shared/parallax_plane.gd. Quatre plans, 3840 × 1080,
+  # balayage par les bords de l'écran ou Q/D. Vérifié en 16:9, 16:10 et ultra-large. Balayage à la souris : pas exercé.
+  2-1-decor-en-plans-et-parallaxe: review
+  # home_prop.gd, scenes/closeups/closeup_layer.gd. Six gros plans ouverts et refermés par le parcours scripté.
+  # Survol, clic, clic droit et Échap : écrits, pas exercés.
+  2-2-objets-interactifs-et-gros-plans: review
+  # core/world/daylight.gd (11 tests), services/atmosphere.gd. Les cinq ambiances vues sur captures.
+  2-3-cinq-ambiances-de-lumiere: review
+  # core/world/weather.gd, scenes/closeups/barometer_closeup.gd. Relevé réel (Paris) et recherche de ville
+  # (Lyon) appelés pour de bon. Choix manuel : les cinq états vus. Repli hors ligne : écrit, pas essayé réseau coupé.
+  2-4-meteo-de-la-ville: review
+  # Jardin aux couleurs de la saison, neige en hiver. Les quatre vues sur captures. La rue viendra à l'epic 5.
+  2-5-quatre-saisons: review
+  # La même vignette sur le comptoir, en gros plan et dans le mini-bocal. Aller-retour vérifié,
+  # y compris un passage en widget pendant le gros plan (il égarait le bocal : corrigé).
+  2-6-bocal-sur-le-comptoir-et-gros-plan: review
+  # scenes/closeups/calendar_closeup.gd, ticket_closeup.gd. Le ticket dépasse de la caisse à l'heure de fin
+  # de journée, jusqu'à ce qu'il soit lu. Focus et fournées y valent 0 jusqu'à l'epic 3. Pas encore de livret (epic 5).
+  2-7-calendrier-mural-et-ticket-du-soir: review
+  # Fiche de paie (salaire, horaires, pointage ; core/text/entries.gd lit « 9 h 30 » et « 2 000,50 »),
+  # baromètre (ville, météo), cadre (format du widget), chevalet (pointage). Baromètre, cadre et chevalet
+  # ne sont pas dans la liste d'objets du GDD : à confirmer par Victor (décisions R-2.1 et R-2.2).
+  2-8-reglages-en-objets: review
+  epic-2-retrospective: optional
+
   epic-3: backlog
   epic-4: backlog
   epic-5: backlog

@@ -57,6 +57,7 @@ Captures : `planning-artifacts/prototype/`.
 |---|---|---|
 | 0 — Fondations | Story 0.1 faite (installeurs retirés). Stories 0.2 à 0.8 écrites, en attente de relecture | Cinq lancements enchaînés sur une sauvegarde d'essai avec une horloge simulée (fermé lundi 12 h, rouvert mardi, jeudi, horloge reculée au mercredi, retour au jeudi) : montants exacts, aucun double paiement |
 | 1 — Bocal et widget | Les neuf stories sont écrites, en attente de relecture | 84 tests hors écran. Bocal plein pour les trois tailles : au repos, tas au bord ou un peu au-dessus (1,0 à 1,25 fois la hauteur selon les essais). Contenu identique après relance. Parcours scripté : secouer, trois formats de widget, opacité, retour à la maison |
+| 2 — Maison | Les huit stories sont écrites, en décor provisoire dessiné par le code, en attente de relecture | Voir « Epic 2 » ci-dessous |
 
 **Mesures de l'epic 1**, sur le PC de Victor (Ryzen 7 5700X3D, Radeon RX 6700 XT, 16 cœurs logiques) :
 
@@ -71,13 +72,33 @@ Captures : `planning-artifacts/prototype/`.
 
 La cible du GDD (2 % d'un processeur 4 cœurs, soit 8 % d'un cœur) est tenue en widget sur cette machine.
 
+**Epic 2 — La maison (décor provisoire).** Les huit stories sont écrites, en attente de relecture. 112 tests hors écran. Vérifié par captures et par un parcours scripté (`--tour`) sur une sauvegarde d'essai : balayage d'un bout à l'autre, les cinq ambiances de lumière (aube, jour, heure dorée, heure bleue, nuit), les cinq météos, les quatre saisons, les six gros plans, l'aller-retour du bocal entre comptoir, gros plan et mini-bocal, une fenêtre 16:10 et une fenêtre ultra-large, un jour marqué « congé », le pointage manuel. Les deux adresses d'Open-Meteo ont été appelées pour de bon : relevé météo de Paris et recherche de « Lyon » (cinq réponses).
+
+**Mesures de l'epic 2**, même machine, deux fils de travail (voir ADR-011) :
+
+| Situation | Processeur | Mémoire |
+|---|---|---|
+| Maison, rien ne tombe (nuit, lampes allumées) | 0,9 à 1,4 % d'un cœur | 240 Mo |
+| Maison, salaire qui tombe, pot à moitié (2 000 € net) | 7,3 % d'un cœur | 232 Mo |
+| Maison, salaire qui tombe, pot qui déborde (114 objets) | 15 à 22 % d'un cœur | 235 Mo |
+| Maison, pot à moitié, il pleut | 12,3 % d'un cœur | 232 Mo |
+| Widget mini-bocal, pot à moitié | 5,2 % d'un cœur | 219 Mo |
+| Widget mini-bocal, pot qui déborde | 11,8 % d'un cœur | 221 Mo |
+| Widget pastille | 0,2 % d'un cœur | 205 Mo |
+
+Avant ADR-011, avec un fil de travail par cœur, la maison coûtait de 28 à 56 % d'un cœur dès que le salaire tombait : ces mesures-là remplacent le « 9 % » de l'epic 1, pris avec un bocal peu rempli.
+
+Ce qui coûte encore : chaque pièce qui tombe réveille tout le tas (le bocal simule et se redessine 45 % du temps à 2 000 € net, 25 opérations en 40 s). Piste non suivie, à reprendre si le portable de la destinataire peine : figer le tas au repos et ne libérer que ce qui se trouve au-dessus d'une fusion (voir ADR-009, qui l'avait écarté sous sa forme simple).
+
 **Non vérifié :**
 
 - le flux GitHub `game-tests.yml` n'a encore jamais tourné (rien n'est poussé) ;
 - les performances sur un portable de bureau ;
-- les gestes à la souris (attraper une pièce, tapoter, glisser le widget, clic droit, molette) : écrits, pas exercés par les essais automatiques ;
+- les gestes à la souris (attraper une pièce, tapoter, glisser le widget, clic droit, molette ; à la maison : survol et clic des objets, balayage par les bords de l'écran, saisie au clavier dans les feuilles) : écrits, pas exercés par les essais automatiques, qui ouvrent les gros plans par le code ;
 - l'icône de la zone de notification : créée selon le moteur, pas vue à l'écran ;
-- les sons : joués sans erreur, jamais écoutés.
+- les sons : joués sans erreur, jamais écoutés ;
+- le repli hors ligne de la météo : écrit (une requête qui échoue garde la dernière météo connue), pas essayé réseau coupé ;
+- la justesse du relevé météo lui-même : le jeu a reçu un code et l'a traduit, personne n'a comparé avec le ciel du jour.
 
 ## Decision Summary
 
@@ -99,7 +120,8 @@ La cible du GDD (2 % d'un processeur 4 cœurs, soit 8 % d'un cœur) est tenue en
 | Scènes | `.tscn` pour tout ce qui se règle à l'œil ; scripts pour le comportement | — | 2 à 7 | Victor peut déplacer un objet dans l'éditeur sans toucher au code |
 | Audio | Bus de mixage du moteur, un par famille de sons | Godot 4.7.2 | 9 | Natif |
 | Musique | Fichiers locaux (OGG) ; radios en ligne à l'étude | — | 9 | Le moteur ne lit pas un flux radio sans extension |
-| Météo | Open-Meteo, sans clé, par `HTTPRequest` | API v1 (non appelée pendant cette session) | 2, 5 | Gratuit, sans compte |
+| Météo | Open-Meteo, sans clé, par `HTTPRequest` | API v1 (relevé et recherche de ville appelés le 2026-10-08) | 2, 5 | Gratuit, sans compte |
+| Fils de travail | Deux, au lieu d'un par cœur | Godot 4.7.2 | 1, 2 | Mesuré : la charge triple sinon dès qu'une pièce tombe (ADR-011) |
 | Tests | Lanceur maison `tests/run_tests.gd`, hors écran | — | Tous | Zéro dépendance ; détecte les erreurs de script |
 | Textes | Aucun texte visible dans le code ; tout vit dans `data/` | — | Tous | Traduction ultérieure par duplication des fichiers |
 | Images | WebP (sans perte pour les objets détourés, qualité 90 pour les décors) | — | 2 à 7 | Dépôt léger sans stockage externe |
@@ -115,6 +137,8 @@ MoneyMaker/
 │   ├── core/                          # règles pures : aucun nœud, aucun accès aux services
 │   │   ├── money/                     # denominations, jar_composition, salary_engine, payroll, bank_account
 │   │   ├── time/                      # work_schedule, game_calendar, focus_timer
+│   │   ├── world/                     # daylight (soleil, ambiances), weather (états, codes météo)
+│   │   ├── text/                      # entries : lire une heure ou une somme écrite à la main
 │   │   ├── kitchen/                   # recipe, pantry, batch (machine à états de la fournée), mastery
 │   │   ├── shop/                      # catalog, basket, mail_order
 │   │   ├── display/                   # display_layout (surfaces et emplacements)
@@ -125,7 +149,7 @@ MoneyMaker/
 │   │   └── save/                      # save_files, migrations, v1_import
 │   ├── services/                      # services globaux (autoloads)
 │   │   ├── clock.gd  content.gd  game.gd  scenes.gd
-│   │   └── window_modes.gd  sky.gd  sound.gd  events.gd
+│   │   └── window_modes.gd  atmosphere.gd  sound.gd  events.gd
 │   ├── data/                          # contenu public (JSON)
 │   │   ├── balance.json               # tous les nombres réglables du GDD
 │   │   ├── denominations.json  products.json  utensils.json  catalog.json
@@ -135,14 +159,15 @@ MoneyMaker/
 │   ├── content_private/               # ignoré par git : mots doux, secrets personnels
 │   ├── scenes/
 │   │   ├── boot/                      # démarrage, chargement, reprise de la v1
-│   │   ├── home/                      # la maison et ses objets
+│   │   ├── home/                      # la maison : home (scène principale), home_layout, home_decor, home_prop
 │   │   ├── jar/                       # le bocal 2.5D
 │   │   ├── street/  grocery/          # la rue, l'épicerie
-│   │   ├── closeups/                  # livre, bloc-notes, livret, carnet, garde-manger, four
+│   │   ├── closeups/                  # closeup_layer, paper ; fiche de paie, calendrier, ticket, baromètre,
+│   │   │                              # cadre du widget ; plus tard livre, bloc-notes, livret, carnet, four
 │   │   ├── widget/                    # les trois formats
 │   │   ├── actors/                    # Chips, Honoré
-│   │   ├── shared/                    # interactable, parallax_plane, draggable, kraft_label
-│   │   └── workbench/                 # écran de travail (ardoise, fiche de paie) en attendant la maison
+│   │   ├── shared/                    # parallax_plane ; plus tard draggable, kraft_label
+│   │   └── workbench/                 # ancien écran de travail, gardé comme banc d'essai du bocal
 │   ├── assets/
 │   │   ├── art/{home,street,grocery,money,pastries,products,chips,honore,props,paper}/
 │   │   ├── audio/{music,ambience,kitchen,chips,street,objects}/
@@ -162,10 +187,10 @@ MoneyMaker/
 |---|---|---|
 | 0 — Fondations | `core/money`, `core/time`, `core/save`, `scenes/boot`, `tests/` | `Clock`, `Game`, `Content` |
 | 1 — Bocal et widget | `scenes/jar`, `scenes/widget`, `core/money/jar_composition` | `WindowModes`, `Sound` |
-| 2 — Maison | `scenes/home`, `scenes/shared` | `Sky`, `Scenes` |
+| 2 — Maison | `scenes/home`, `scenes/closeups`, `scenes/shared`, `core/world`, `core/text` | `Atmosphere`, `WindowModes` |
 | 3 — Fournée | `core/kitchen`, `core/time/focus_timer`, `scenes/closeups`, `data/books` | `Game`, `WindowModes` |
 | 4 — Vitrine | `core/display`, `scenes/shared/draggable` | `Game` |
-| 5 — Rue et banque | `scenes/street`, `core/money/bank_account`, `core/money/ledger` | `Scenes`, `Sky` |
+| 5 — Rue et banque | `scenes/street`, `core/money/bank_account`, `core/money/ledger` | `Scenes`, `Atmosphere` |
 | 6 — Épicerie et Honoré | `scenes/grocery`, `scenes/actors`, `core/shop`, `core/social`, `data/dialogue` | `Content`, `Game` |
 | 7 — Chips | `core/companion`, `scenes/actors`, `data/chips_routine.json` | `Clock`, `Events` |
 | 8 — Carnet de commandes | `core/quests`, `data/quests.json`, `scenes/closeups` | `Events`, `Game` |
@@ -186,10 +211,12 @@ MoneyMaker/
 | `Clock` | Heure, jour de jeu (bascule à 4 h), saison ; battement d'une seconde | — |
 | `Content` | Charge et valide `data/`, puis superpose `content_private/` | — |
 | `Game` | Possède l'état (objets de `core/`), charge et sauvegarde | `Clock`, `Content`, `Events` |
-| `Sky` | Ambiance lumineuse, météo, saison visuelle | `Clock` |
-| `Scenes` | Changement de lieu avec fondu, ouverture des gros plans | — |
 | `WindowModes` | Maison ↔ widget, position, opacité, mode discret | `Game` |
-| `Sound` | Bus, ambiances, musique | `Sky`, `Game` |
+| `Atmosphere` | Ambiance lumineuse, météo, saison visuelle. (Il devait s'appeler `Sky` : le nom est déjà pris par une classe du moteur, comme `Plane`.) | `Clock`, `Game`, `Events` |
+| `Scenes` | Changement de lieu avec fondu (à l'epic 5 ; d'ici là, la maison ouvre elle-même ses gros plans) | — |
+| `Sound` | Bus, ambiances, musique | `Atmosphere`, `Game` |
+
+En place au 2026-10-08 : `Events`, `Clock`, `Game`, `WindowModes`, `Atmosphere`.
 
 - **Outils présents sur la machine de Victor :** Godot 4.7.2 (Steam), Blender 5.2 (Steam), uv 0.12.17 avec Python 3.14.
 
@@ -245,7 +272,7 @@ MoneyMaker/
 
 **But :** un salaire exact quoi qu'il arrive à l'application.
 
-Écrit et testé à l'epic 0 : `core/money/payroll.gd`, 23 tests.
+Écrit et testé à l'epic 0, complété à l'epic 2 : `core/money/payroll.gd`, 27 tests.
 
 - `Clock` est le seul à lire l'horloge du PC. Tout le reste reçoit l'instant en paramètre, en **secondes locales** (l'heure qu'affiche le PC, heure d'été comprise) : les tests fournissent l'heure qu'ils veulent.
 - Pour chaque jour : `centimes = (secondes_travaillées × net_mensuel + reste) ÷ secondes_mensuelles`, en division entière ; le reste passe au jour suivant.
@@ -254,7 +281,8 @@ MoneyMaker/
 - **Changement de date :** le jour en cours est clos (son reste de journée est versé) et inscrit au journal ; les jours entiers manqués sont payés un par un, 31 au plus ; le nouveau jour s'ouvre.
 - **Journal :** une ligne par jour clos — secondes travaillées, centimes, nature (`travaille`, `repos`, `conge`, `ferie`, `sans_solde`). Une ligne n'est jamais modifiée.
 - **Horloge reculée :** la journée en cours est rangée au journal telle quelle. Quand une date déjà inscrite redevient le jour en cours, elle repart de ce qui lui a été versé : aucune date n'est payée deux fois.
-- **Pointage manuel :** le temps ne compte qu'entre arrivée et départ, 16 h au plus par jour ; un pointage oublié s'arrête à minuit.
+- **Pointage manuel :** le temps ne compte qu'entre arrivée et départ, 16 h au plus par jour ; un pointage oublié s'arrête à minuit. Passer de l'horaire au pointage en cours de journée garde le temps déjà compté ; revenir à l'horaire dépointe, et rien n'est repris.
+- `is_working_at(maintenant)` dit si le temps compte à cet instant : c'est ce qu'affiche le chevalet du bureau.
 
 ### 3. Fenêtre à deux visages
 
@@ -264,7 +292,7 @@ MoneyMaker/
 | Premier plan | Non | Oui |
 | Fond | Opaque | Transparent |
 | Taille de conception | 1920 × 1080 | Celle du format : pastille 180 × 64, bandeau 320 × 96, mini-bocal 240 × 300 |
-| Images par seconde | Celles de l'écran | 30 au plus |
+| Images par seconde | 60 au plus | 30 au plus |
 | Bocal | Simulé et rendu | En pause, sauf en mini-bocal |
 
 Écrit à l'epic 1 : `services/window_modes.gd`.
@@ -279,9 +307,26 @@ MoneyMaker/
 
 ### 4. Objets diégétiques
 
-- `Interactable` : zone cliquable posée sur un objet du décor. Signaux `hovered`, `unhovered`, `activated`. Au survol : éclaircissement et léger rebond.
-- **Gros plan :** une scène dans `scenes/closeups/`, ouverte par `Scenes.open_closeup(id)` au-dessus du lieu assombri. Échap, clic droit ou clic hors de l'objet la ferme.
+Écrit à l'epic 2 : `scenes/home/home_prop.gd`, `scenes/closeups/`.
+
+- **Objet cliquable** (`home_prop.gd`) : une zone posée dans le plan de la pièce, qui émet `activated(kind)`. Au survol : éclaircissement et léger grossissement. En décor provisoire, l'objet se dessine lui-même ; avec les illustrations, il n'en restera que la zone et son image.
+- **Gros plan :** `closeup_layer.gd` assombrit la maison et centre une feuille (`paper.gd` leur donne le même papier, la même encre, la même écriture). Échap, clic droit ou clic hors de l'objet le ferme. C'est la maison qui ouvre ses gros plans ; un service `Scenes` viendra quand il y aura plusieurs lieux.
+- **Le bocal change de place, pas de nature :** la même vignette est posée sur le comptoir, agrandie en gros plan ou installée dans le mini-bocal. Sur le comptoir, c'est une zone cliquable posée devant qui répond ; en gros plan, c'est le bocal lui-même (attraper, tapoter).
+- **Un réglage, un objet :** fiche de paie (salaire, horaires, pointage), calendrier mural (jours marqués), baromètre (ville, météo), cadre posé sur le bureau (format du widget), chevalet (pointage du jour), caisse (ticket du soir).
 - Règle : un gros plan lit et modifie l'état par `Game`, jamais directement un autre gros plan.
+- **Ce qu'on écrit se lit comme on l'écrit** (`core/text/entries.gd`) : « 9 h 30 », « 2 000,50 ». Ce qui est ambigu (« 9,5 », « 2.000 ») est refusé et signalé en rouge, jamais deviné.
+
+### 4 bis. La maison : plans, balayage, lumière
+
+Écrit à l'epic 2 : `scenes/home/`, `scenes/shared/parallax_plane.gd`, `services/atmosphere.gd`, `core/world/`.
+
+- **Quatre plans**, du plus loin au plus près : le dehors (défile à 0,6), la pièce (1), les lumières (1, en ajout de couleur), le premier plan (1,25). La souris les décale encore de 3 à 12 px.
+- **Le décor fait 3840 × 1080.** On le balaie en approchant la souris d'un bord, ou avec Q/D et les flèches. Il remplit toujours la hauteur de la fenêtre : sur un écran moins allongé que le 16:9 il est agrandi, sur un écran plus large on en voit davantage.
+- **Le plan du dehors ne porte que des bandes horizontales** (ciel, collines, haie, trottoir) : il défile moins vite que la pièce, donc ce qu'on voit par la porte change avec le balayage, et un chemin dessiné vers la porte se décalerait.
+- **Toute la mise en place vit dans `home_layout.gd`** : c'est le seul fichier à retoucher quand les illustrations remplaceront les formes.
+- **Lumière :** `core/world/daylight.gd` calcule la hauteur du soleil (formules simplifiées de la NOAA, latitude et longitude de la ville, centre de la France par défaut) et en tire le poids de cinq ambiances. `Atmosphere` mélange leurs teintes toutes les 20 s et émet `changed`. La pièce est teintée d'un bloc ; les sources chaudes (guirlande, lustre, lampe, four) et le jour qui entre sont des halos en ajout de couleur, par-dessus.
+- **Les objets gardent une part de clarté propre** (18 % pour ce qui se clique, 50 % pour le bocal et l'ardoise) : la nuit, on les repère et on les lit encore.
+- **Météo :** cinq états. Réelle (relevé Open-Meteo toutes les 30 min au plus, seulement si une ville est réglée) ou choisie à la main. La pluie et la neige tombent dans le plan du dehors ; elles s'arrêtent en widget.
 
 ### 5. Surfaces de vitrine
 
@@ -403,13 +448,15 @@ static func earned_today(schedule: WorkSchedule, net_monthly_cents: int, weekday
     "schedule": {"working_days": [1,2,3,4,5], "start_minute": 540, "end_minute": 1020,
                  "lunch_start_minute": 720, "lunch_duration_minutes": 60},
     "day_marks": {"2026-10-20": "conge"},
-    "city": {"name": "Lyon", "latitude": 45.8, "longitude": 4.8},
     "focus_minutes": 25, "short_break_minutes": 5, "long_break_minutes": 15,
     "strict_focus": true, "price_factor": 1.0, "copy_assist": false,
-    "widget": {"format": "bandeau", "position": [3096, 1272], "opacity": 1.0},
     "volumes": {"music": 0.6, "ambience": 0.8, "kitchen": 0.8, "chips": 1.0, "street": 0.7, "objects": 0.9},
     "accessibility": {"text_scale": 1.0, "plain_handwriting": false, "reduced_motion": false}
   },
+  "preferences": {"widget": {"format": "bandeau", "position": [3096, 1272], "opacity": 1.0},
+                  "discreet": false, "sound": true},
+  "world": {"city": {"name": "Lyon", "latitude": 45.8, "longitude": 4.8},
+            "weather": {"mode": "reelle", "manual": "clair", "last": "pluie", "last_at": 1791459000}},
   "payroll": {"open_day": "2026-10-08", "open_day_credited": 3956, "open_day_worked": 10800,
               "carry_numerator": 420000, "carry_denominator": 546000, "total_earned_cents": 13186,
               "clocked_in_at": -1, "manual_worked_today": 0},
@@ -435,11 +482,14 @@ static func earned_today(schedule: WorkSchedule, net_monthly_cents: int, weekday
   "ephemerals": {"bouquet": {"until_day": "2026-10-15"}, "cafe": {"doses": 12}},
   "notepad": {"pages": [[{"text": "farine", "struck": false}]]},
   "secrets_found": [],
-  "stats": {"focus_completed": 31, "deposits": 4, "first_day": "2026-10-06"}
+  "stats": {"focus_completed": 31, "deposits": 4, "first_day": "2026-10-06", "ticket_seen_day": "2026-10-07"}
 }
 ```
 
-- **En place depuis l'epic 0 :** `version`, `saved_at`, `settings` (salaire, horaires, marques de jours), `payroll`, `ledger`, `jar` (taille et centimes), `stats.first_day`. Les autres blocs arrivent avec leur epic.
+- **En place depuis l'epic 0 :** `version`, `saved_at`, `settings` (salaire, horaires, pointage, marques de jours), `payroll`, `ledger`, `jar` (taille et centimes), `stats.first_day`.
+- **Depuis l'epic 1 :** `preferences` (widget, mode discret, son), `jar.composition`.
+- **Depuis l'epic 2 :** `world` (ville et météo ; `city` est vide tant qu'aucune ville n'est réglée, `last_at` vaut 0 tant qu'aucun relevé n'a réussi), `stats.ticket_seen_day` (dernier ticket du soir lu).
+- Les autres blocs arrivent avec leur epic. Aucun de ces ajouts n'a demandé de migration : un champ absent prend sa valeur par défaut.
 - **Écriture atomique :** écrire `save.tmp`, supprimer `save.json`, renommer. Une coupure entre les deux laisse `save.tmp`, que la lecture sait reprendre.
 - **Copies de secours :** `save.1.json` à `save.3.json` tournent **une fois par lancement**, après une lecture réussie du fichier principal. Ce sont donc les états des trois derniers lancements.
 - **Cadence :** écriture 2 s après une action de la joueuse, toutes les 60 s s'il y a du nouveau, et à la fermeture. Les centimes qui tombent ne déclenchent pas d'écriture : le rattrapage les recalcule.
@@ -502,9 +552,33 @@ func pretend_it_is(text: String) -> void          # essais uniquement
 var state: GameState                              # state.payroll, state.jar_cents
 var started_from: String                          # "sauvegarde", "reprise_v1", "nouvelle_partie"
 func boot(profile: String = "") -> void           # inerte tant que boot() n'est pas appelé
-func set_pay(net_monthly_cents: int, schedule_values: Dictionary) -> void
+func set_pay(net_monthly_cents: int, schedule_values: Dictionary) -> void   # peut porter "manual_clocking"
+func set_clocked_in(clocked_in: bool) -> void     # pointage manuel : commence ou termine la journée
+func set_day_mark(day: String, kind: String) -> bool   # "conge", "ferie", "sans_solde", "" pour retirer
+func set_city(city_name: String, latitude: float, longitude: float) -> void
+func clear_city() -> void
+func set_weather(mode: String, manual_state: String) -> void   # "reelle" ou "manuelle"
+func mark_ticket_seen(day: String) -> void
 func request_save() -> void
 func save_now() -> bool
+
+# Events — en place
+signal cents_earned(cents: int)
+signal jar_changed(ops: Array[Dictionary])
+signal settings_changed                           # salaire, horaires, pointage, jours marqués
+signal preferences_changed                        # mode discret, son
+signal world_changed                              # ville ou météo
+
+# Atmosphere — en place
+signal changed                                    # lumière, météo ou saison
+signal cities_found(results: Array[Dictionary])   # [{ name, region, latitude, longitude }]
+var ambience: String                              # "aube", "jour", "heure_doree", "heure_bleue", "nuit"
+var weather: String                               # "clair", "nuageux", "pluie", "neige", "brouillard"
+var season: String
+var room_tint: Color                              # et outside_tint, sky_top, sky_bottom, sunlight_color
+var lamps: float                                  # 0 à 1 ; sunlight de même
+func start() -> void                              # une fois l'état chargé
+func search_city(city_name: String) -> void       # réponse par cities_found
 
 # Game — à venir avec les epics suivants
 func pour_jar_into_bag() -> bool
@@ -527,6 +601,7 @@ func toggle() -> void
 func show_home() -> void
 func show_widget(format: String = "") -> void
 func cycle_format() -> void
+func choose_format(new_format: String) -> void    # depuis le cadre posé sur le bureau
 func nudge_opacity(direction: int) -> void
 func move_widget_to(position: Vector2i) -> void
 func end_move() -> void
@@ -537,18 +612,18 @@ func set_discreet(enabled: bool) -> void
 func set_sound_enabled(enabled: bool) -> void
 func remember_widget(format: String, position: Vector2i, opacity: float) -> void
 
-# Scenes
+# Scenes — à venir à l'epic 5
 func go_to(place: String) -> void                 # "home", "street", "grocery"
-func open_closeup(id: String) -> void
-func close_closeup() -> void
 ```
 
 ### Open-Meteo
 
 - Recherche de ville : `GET https://geocoding-api.open-meteo.com/v1/search?name=<ville>&count=5&language=fr`
-- Météo : `GET https://api.open-meteo.com/v1/forecast?latitude=<lat>&longitude=<lon>&current=weather_code,is_day&daily=sunrise,sunset&timezone=auto`
-- Les codes météo sont ramenés aux 5 états du GDD dans `services/sky.gd`.
-- Ces deux adresses n'ont pas été appelées pendant cette session : à vérifier à la story 2.4.
+- Météo : `GET https://api.open-meteo.com/v1/forecast?latitude=<lat>&longitude=<lon>&current=weather_code`
+- Le lever et le coucher du soleil ne sont pas demandés : la hauteur du soleil est calculée par le jeu, qui marche donc aussi sans réseau.
+- Les codes météo sont ramenés aux 5 états du GDD dans `core/world/weather.gd`.
+- Les deux adresses ont été appelées le 2026-10-08 : relevé pour Paris, recherche de « Lyon » (cinq villes, noms de régions et de pays en français).
+- Délai de 5 s. Un relevé réussi par demi-heure au plus ; après un échec, pas de nouvel essai avant une demi-heure tant que le jeu reste ouvert. Un échec ne dit rien et garde la dernière météo connue.
 
 ## Security Architecture
 
@@ -562,8 +637,8 @@ func close_closeup() -> void
 
 | Cible du GDD | Moyen |
 |---|---|
-| 60 images/s à la maison | Rendu Compatibility ; 264 objets au plus dans le bocal ; garde de mise au repos ; vignette du bocal redessinée seulement quand quelque chose bouge |
-| ≤ 2 % de processeur en widget | Mode économie du moteur, 30 images/s au plus, bocal en pause en pastille et en bandeau |
+| 60 images/s à la maison | Rendu Compatibility ; 264 objets au plus dans le bocal ; garde de mise au repos ; vignette du bocal redessinée seulement quand quelque chose bouge ; deux fils de travail (ADR-011) |
+| ≤ 2 % de processeur en widget | Mode économie du moteur, 30 images/s au plus, bocal en pause en pastille et en bandeau ; pluie et neige arrêtées en widget. Tenu en pastille et en bandeau ; le mini-bocal coûte de 5 à 12 % d'un cœur quand le salaire tombe |
 | ≤ 250 Mo de mémoire | Un seul lieu chargé à la fois ; décors en 1920 × 1080 par plan |
 | Démarrage ≤ 4 s | Le widget démarre sans charger la maison ; chargement des lieux en arrière-plan |
 | Changement de lieu ≤ 0,7 s | Préchargement du lieu voisin dès le survol de la porte |
@@ -636,11 +711,18 @@ Options : figer les objets posés (comme la v1) ou les amortir. Décision : amor
 **ADR-010 — Mobile plus tard : le calcul reste hors du moteur.**
 Contexte : Victor envisage une application Android et iOS avec widget d'écran d'accueil. Le jeu s'exporte sur mobile, mais un widget d'écran d'accueil est un composant natif (Kotlin, Swift) qui ne peut pas faire tourner le moteur. Décision, sans coût aujourd'hui : garder la paie dans `core/`, calculée uniquement à partir de l'heure et des réglages, et garder ces réglages dans un fichier JSON simple. Un widget natif pourra refaire le même calcul sans que le jeu soit lancé. Non étudié : les limites de rafraîchissement des widgets de chaque système, l'adaptation de l'écran au tactile et au format portrait.
 
+**ADR-011 — Deux fils de travail, pas un par cœur.**
+Contexte : à l'epic 2, la maison coûtait de 28 à 56 % d'un cœur dès que le salaire tombait, contre 1 % au repos. La scène n'y était pour rien (l'ancien écran de travail coûtait autant) : à chaque pas de physique, le moteur réveillait ses seize fils de travail pour une centaine de pièces. Décision : `threading/worker_pool/max_threads = 2`. Mesuré le même jour simulé, bocal qui déborde : 45 à 52 % en automatique, 15 à 22 % avec un ou deux fils. Deux plutôt qu'un pour laisser un fil aux chargements en arrière-plan à venir.
+
+**ADR-012 — Le soleil est calculé, pas demandé.**
+Options : demander lever et coucher à Open-Meteo, ou calculer la hauteur du soleil. Décision : la calculer (`core/world/daylight.gd`, testée contre les solstices et l'équinoxe à Paris). Raisons : la lumière fonctionne sans réseau et sans ville ; les cinq ambiances se fondent selon une hauteur continue plutôt que selon deux heures butoirs ; un service de moins dont dépendre.
+
 ## Risques ouverts
 
 | Risque | Gravité | Réponse |
 |---|---|---|
-| Performance inconnue sur un portable de bureau | Haute | Mesure sur la machine de la destinataire ; repli : moins d'objets, vignette à demi-résolution |
+| Performance inconnue sur un portable de bureau | Haute | Mesure sur la machine de la destinataire ; repli : moins d'objets, vignette à demi-résolution, tas figé au repos (voir « Mesures de l'epic 2 ») |
+| Décor provisoire : toute la mise en place est à l'œil | Basse | Les rectangles de `home_layout.gd` sont à reprendre quand les illustrations arrivent ; les proportions des objets changeront |
 | Mise au repos des pièces | Basse | Traitée à l'epic 1 par amortissement ; à revérifier sur un portable de bureau |
 | Sons fabriqués par calcul, jamais écoutés | Moyenne | Écoute par Victor ; vrais enregistrements à l'epic 9 ; touche M pour couper |
 | Gestes à la souris non exercés par les essais | Moyenne | Essai à la main par Victor ; essais par événements simulés à ajouter |
