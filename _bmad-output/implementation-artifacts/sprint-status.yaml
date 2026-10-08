@@ -1,8 +1,9 @@
-# generated: 2026-01-25T17:40:00+01:00
-# project: MoneyMaker
+# generated: 2026-10-08
+# project: MoneyMaker (refonte Godot)
 # project_key: MM
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
+# source: _bmad-output/planning-artifacts/gdds/gdd-MoneyMaker-2026-10-08/epics.md
 
 # STATUS DEFINITIONS:
 # ==================
@@ -17,49 +18,53 @@
 #   - in-progress: Developer actively working
 #   - review: Ready for code review
 #   - done: Story completed
-#
-# Retrospective Status:
-#   - optional: Can be completed but not required
-#   - done: Retrospective has been completed
 
-generated: 2026-01-25T17:40:00+01:00
+generated: 2026-10-08
 project: MoneyMaker
 project_key: MM
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
+  epic-0: in-progress
+  # En attente d'une décision de Victor : retirer les fichiers, et purger ou non l'historique git.
+  0-1-retirer-les-installeurs-du-depot: backlog
+  # game/, tests/run_tests.gd, tools/godot.ps1, .github/workflows/game-tests.yml (jamais exécuté sur GitHub).
+  0-2-projet-de-jeu-et-tests-automatiques: review
+  # core/time/game_calendar.gd, services/clock.gd.
+  0-3-horloge: review
+  # core/time/work_schedule.gd, core/money/salary_engine.gd.
+  0-4-salaire-en-centimes: review
+  # core/money/payroll.gd.
+  0-5-journal-des-jours-et-rattrapage: review
+  # Dans payroll.gd. Pas encore d'objet à l'écran pour marquer un jour ou pointer : prévu en 2.7 et 2.8.
+  0-6-jours-particuliers-et-pointage: review
+  # core/save/save_files.gd, core/save/migrations.gd, core/state/game_state.gd, services/game.gd.
+  0-7-sauvegarde-versionnee: review
+  # core/save/v1_import.gd, lu dans services/game.gd au premier lancement.
+  0-8-reprise-des-reglages-v1: review
+  epic-0-retrospective: optional
+
   epic-1: backlog
-  1-1-connect-baking-logic: backlog
-  1-2-recipe-completion-event: backlog
-  1-3-save-system-robustness: backlog
-  1-4-plant-assets: backlog
-  1-5-inventory-particles: backlog
-  1-6-hub-parallax: backlog
-  1-7-eating-sounds: backlog
-  1-8-ui-feedback-sounds: backlog
-  1-9-ambient-audio: backlog
-  1-10-fps-counter-toggle: backlog
-  1-11-hub-navigation-tooltips: backlog
-  1-12-zone-transitions: backlog
-  1-13-refactor-magic-numbers: backlog
-  1-14-persistence-type-safety: backlog
+  # Prototype dans game/scenes/prototype/ : à reprendre story par story, il ne compte pas comme fait.
+  1-1-coupures-et-table-de-fusion: backlog
+  1-2-chute-collisions-et-repos: backlog
+  1-3-tailles-de-bocal-et-fusion-paresseuse: backlog
+  1-4-attraper-secouer-tapoter: backlog
+  1-5-debordement: backlog
+  1-6-pluie-de-rattrapage: backlog
+  1-7-widget-trois-formats: backlog
+  1-8-bascule-mode-discret-zone-de-notification: backlog
+  1-9-tintements: backlog
   epic-1-retrospective: optional
-  
+
   epic-2: backlog
-  2-1-window-controls-in-bocal: backlog
-  2-2-baking-ui-layering: backlog
-  2-3-baking-ui-refinement: backlog
-  epic-2-retrospective: optional
-
   epic-3: backlog
-  3-1-widget-layout-stability: backlog
-  3-2-pomodoro-circular-ui: backlog
-  epic-3-retrospective: optional
-
   epic-4: backlog
-  4-1-manual-weather-control: backlog
-  4-2-global-parallax-toggle: backlog
-  4-3-widget-transparency-toggle: backlog
-  4-4-radio-station-manager: backlog
-  epic-4-retrospective: optional
+  epic-5: backlog
+  epic-6: backlog
+  epic-7: backlog
+  epic-8: backlog
+  epic-9: backlog
+  epic-10: backlog
+  epic-11: backlog
